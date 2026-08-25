@@ -112,25 +112,34 @@ export function ScannerPage() {
           )}
 
           {result && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl bg-ink-50 px-4 py-3">
-                <p className="text-xs text-ink-500">بررسی‌شده</p>
-                <p className="mt-1 text-lg font-bold text-ink-900">
-                  {formatNumber(result.scanned)}
-                </p>
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="rounded-xl bg-ink-50 px-4 py-3">
+                  <p className="text-xs text-ink-500">بررسی‌شده</p>
+                  <p className="mt-1 text-lg font-bold text-ink-900">
+                    {formatNumber(result.scanned)}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-brand-50 px-4 py-3">
+                  <p className="text-xs text-brand-600">به صف اضافه شد</p>
+                  <p className="mt-1 text-lg font-bold text-brand-700">
+                    {formatNumber(result.enqueued)}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-ink-50 px-4 py-3" title="تصاویری که از قبل بهینه‌سازی شده‌اند یا فرمت آن‌ها پشتیبانی نمی‌شود (مانند WebP/AVIF).">
+                  <p className="inline-flex items-center gap-1 text-xs text-ink-500">
+                    رد شده
+                    <Info size={13} className="text-ink-400" />
+                  </p>
+                  <p className="mt-1 text-lg font-bold text-ink-900">
+                    {formatNumber(result.skipped)}
+                  </p>
+                </div>
               </div>
-              <div className="rounded-xl bg-brand-50 px-4 py-3">
-                <p className="text-xs text-brand-600">به صف اضافه شد</p>
-                <p className="mt-1 text-lg font-bold text-brand-700">
-                  {formatNumber(result.enqueued)}
-                </p>
-              </div>
-              <div className="rounded-xl bg-ink-50 px-4 py-3">
-                <p className="text-xs text-ink-500">رد شده</p>
-                <p className="mt-1 text-lg font-bold text-ink-900">
-                  {formatNumber(result.skipped)}
-                </p>
-              </div>
+              <p className="text-xs text-ink-400">
+                تصاویر «رد شده» از قبل بهینه‌سازی شده‌اند یا فرمت آن‌ها (مثل WebP/AVIF)
+                نیازی به تبدیل ندارد.
+              </p>
             </div>
           )}
         </CardBody>

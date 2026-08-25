@@ -98,11 +98,12 @@ class QueueManager {
 		$inserted = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"INSERT IGNORE INTO " . self::table() . "
-				(attachment_id, source_path, source_mime, source_size, source_width, source_height, target_format, status)
-				VALUES (%d, %s, %s, %d, %d, %d, %s, 'pending')",
+				(attachment_id, source_path, source_mime, source_size, original_size, source_width, source_height, target_format, status)
+				VALUES (%d, %s, %s, %d, %d, %d, %d, %s, 'pending')",
 				$attachment_id,
 				$path,
 				$mime ?: '',
+				$size,
 				$size,
 				$width,
 				$height,
@@ -217,6 +218,7 @@ class QueueManager {
 			self::table(),
 			array(
 				'status'           => 'completed',
+				'original_size'    => (int) ( $result['original_size'] ?? 0 ),
 				'optimized_size'   => (int) $result['new_size'],
 				'saved_bytes'      => (int) $result['saved_bytes'],
 				'optimization_ratio' => (float) $result['ratio'],
@@ -224,7 +226,7 @@ class QueueManager {
 				'error_message'    => null,
 			),
 			array( 'id' => $id ),
-			array( '%s', '%d', '%d', '%f', '%s', null ),
+			array( '%s', '%d', '%d', '%d', '%f', '%s', null ),
 			array( '%d' )
 		);
 

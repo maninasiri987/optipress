@@ -1,0 +1,36 @@
+OptiPress — WordPress Test Site Credentials & Locations
+=========================================================
+
+ADMIN ACCESS
+------------
+WordPress URL : http://localhost:8080
+Admin URL     : http://localhost:8080/wp-admin
+Username      : optipress_admin
+Password      : OptiPress@123
+Admin email   : admin@optipress.test
+
+WORDPRESS INSTALLATION
+----------------------
+Site root (document root) : /tmp/wordpress
+Config file               : /tmp/wordpress/wp-config.php
+Database                  : MariaDB on 127.0.0.1:3307  (db: wpopti, user: wpuser, pass: wppass123)
+Web server                : PHP built-in server (php -S 0.0.0.0:8080), PID running in session
+
+TEMPLATE / THEME LOCATION
+-------------------------
+Themes directory : /tmp/wordpress/wp-content/themes
+Active theme     : twentytwentyfive
+Active theme dir : /tmp/wordpress/wp-content/themes/twentytwentyfive
+
+PLUGIN LOCATION (OptiPress)
+----------------------------
+Plugin dir : /tmp/wordpress/wp-content/plugins/optipress
+Source repo (this folder) : /home/mani/Desktop/projects/optipress
+
+NOTES
+-----
+- The browser tab favicon and WP menu icon both use the dashicons-images-alt2
+  glyph; the OptiPress app applies a dark theme (toggled in Settings) that also
+  darkens the WordPress admin chrome on OptiPress pages.
+- Images imported for testing are large JPEGs (non-WebP) so they appear as
+  "not optimized" and can be optimized via OptiPress (converts to WebP).

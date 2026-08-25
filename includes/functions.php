@@ -73,3 +73,23 @@ if ( ! function_exists( 'optipress_log' ) ) {
 		\OptiPress\Logging\Logger::instance()->log( $level, $message, $context );
 	}
 }
+
+if ( ! function_exists( 'optipress_is_modern_format' ) ) {
+	/**
+	 * Whether an attachment is already in a modern, optimized format (WebP/AVIF).
+	 *
+	 * OptiPress treats any non-WebP/AVIF image as "not optimized" and will
+	 * convert it to the target modern format during optimization.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return bool
+	 */
+	function optipress_is_modern_format( $attachment_id ) {
+		$file = get_attached_file( (int) $attachment_id );
+		if ( ! $file ) {
+			return false;
+		}
+		$ext = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
+		return in_array( $ext, array( 'webp', 'avif' ), true );
+	}
+}

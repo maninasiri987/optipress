@@ -98,12 +98,116 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Persian reads best when headings carry a little more weight. Force Vazir
+   Matn on every heading/strong element so titles never fall back to a
+   non-Persian system font. */
+#optipress-root h1,
+#optipress-root h2,
+#optipress-root h3,
+#optipress-root h4,
+#optipress-root h5,
+#optipress-root h6,
+#optipress-root strong,
+#optipress-root b {
+  font-family: var(--font-sans);
+  font-weight: 700;
+}
+
 /* Form controls ignore inherited font; force Vazir Matn everywhere. */
 #optipress-root input,
 #optipress-root select,
 #optipress-root textarea,
 #optipress-root button {
   font-family: var(--font-sans);
+}
+
+/* Dark theme for native form controls (browsers paint them white by default,
+   which ignores Tailwind utility classes). */
+#optipress-root.dark input,
+#optipress-root.dark select,
+#optipress-root.dark textarea,
+#optipress-root.dark input[type="text"],
+#optipress-root.dark input[type="number"],
+#optipress-root.dark input[type="email"],
+#optipress-root.dark input[type="password"],
+#optipress-root.dark input[type="search"],
+#optipress-root.dark input[type="url"] {
+  background-color: #0f172a;
+  color: #e2e8f0;
+  border-color: #1f2937;
+}
+
+#optipress-root.dark input::placeholder,
+#optipress-root.dark textarea::placeholder {
+  color: #64748b;
+}
+
+#optipress-root.dark select option {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+/* ---------------------------------------------------------------------------
+   Darken the WordPress admin chrome (top bar, left menu, footer) on OptiPress
+   pages when the dark theme is active, so the page looks cohesive. Scoped to
+   `body.optipress-dark` which is only added on OptiPress screens.
+--------------------------------------------------------------------------- */
+body.optipress-dark {
+  background: #0b1120;
+}
+
+body.optipress-dark #wpcontent,
+body.optipress-dark #wpbody,
+body.optipress-dark #wpbody-content,
+body.optipress-dark #wpfooter {
+  background: #0b1120;
+}
+
+body.optipress-dark #wpadminbar,
+body.optipress-dark #wpadminbar .menupop .ab-sub-wrapper {
+  background: #0f172a !important;
+}
+
+body.optipress-dark #wpadminbar .ab-item,
+body.optipress-dark #wpadminbar .ab-label,
+body.optipress-dark #wpadminbar .ab-icon,
+body.optipress-dark #wpadminbar .display-name,
+body.optipress-dark #wpadminbar .username {
+  color: #e2e8f0 !important;
+}
+
+body.optipress-dark #adminmenu,
+body.optipress-dark #adminmenuwrap,
+body.optipress-dark #adminmenuback {
+  background: #0f172a !important;
+}
+
+body.optipress-dark #adminmenu a,
+body.optipress-dark #adminmenu .wp-menu-name,
+body.optipress-dark #adminmenu .wp-menu-image,
+body.optipress-dark #adminmenu .collapse-button-label {
+  color: #cbd5e1 !important;
+}
+
+body.optipress-dark #adminmenu .wp-submenu {
+  background: #111827 !important;
+}
+
+body.optipress-dark #adminmenu .wp-has-current-submenu > a.wp-has-current-submenu,
+body.optipress-dark #adminmenu .current > a {
+  background: #1d4ed8 !important;
+  color: #ffffff !important;
+}
+
+body.optipress-dark #wpfooter,
+body.optipress-dark #footer-thankyou,
+body.optipress-dark #footer-upgrade {
+  background: #0b1120 !important;
+  color: #94a3b8 !important;
+}
+
+body.optipress-dark #wpfooter a {
+  color: #93c5fd !important;
 }
 
 /* Tabular figures for statistics so numbers align cleanly. */

@@ -3,8 +3,6 @@ import {
   Images,
   CheckCircle2,
   Clock,
-  XCircle,
-  Archive,
   TrendingDown,
   Percent,
 } from 'lucide-react';
@@ -50,18 +48,6 @@ export function StatsCards() {
         )}
         icon={Clock}
         tone="brand"
-      />
-      <StatCard
-        label="ناموفق"
-        value={formatNumber(data.failed)}
-        icon={XCircle}
-        tone="rose"
-      />
-      <StatCard
-        label="فضای آزادشده"
-        value={formatBytes(data.saved_total)}
-        icon={Archive}
-        tone="green"
       />
       <StatCard
         label="میانگین کاهش حجم"

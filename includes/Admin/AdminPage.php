@@ -35,6 +35,7 @@ class AdminPage {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_head', array( $this, 'output_favicon' ) );
+		add_filter( 'admin_body_class', array( $this, 'admin_body_class' ) );
 	}
 
 	/**
@@ -79,7 +80,9 @@ class AdminPage {
 	 * @return void
 	 */
 	public function render_page() {
-		echo '<div id="optipress-root" class="optipress-admin-wrap"></div>';
+		$theme = (string) optipress_get_option( 'theme', 'light' );
+		$cls   = 'optipress-admin-wrap' . ( 'dark' === $theme ? ' dark' : '' );
+		echo '<div id="optipress-root" class="' . esc_attr( $cls ) . '"></div>';
 	}
 
 	/**
@@ -94,6 +97,24 @@ class AdminPage {
 		}
 		$url = OPTIPRESS_URL . 'assets/icon.png';
 		echo '<link rel="icon" type="image/png" href="' . esc_url( $url ) . '">';
+	}
+
+	/**
+	 * Add a body class so the WordPress admin chrome (top bar, left menu,
+	 * footer) can be darkened to match OptiPress's dark theme.
+	 *
+	 * @param string $classes Space-separated body classes.
+	 * @return string
+	 */
+	public function admin_body_class( $classes ) {
+		$screen = get_current_screen();
+		if ( ! $screen || strpos( $screen->id, 'optipress' ) === false ) {
+			return $classes;
+		}
+		if ( 'dark' === (string) optipress_get_option( 'theme', 'light' ) ) {
+			$classes = trim( $classes . ' optipress-dark' );
+		}
+		return $classes;
 	}
 
 	/**
@@ -120,8 +141,7 @@ class AdminPage {
 			return;
 		}
 
-		// Vite emits one manifest entry per HTML input; locate the JS + CSS.
-		$js_entry = null;
+		// Vite emits one manifest entry per HTML input; locate the JS + CSS.		$js_entry = null;
 		$css_files = array();
 		foreach ( $data as $meta ) {
 			if ( isset( $meta['file'] ) && preg_match( '/\.js$/', $meta['file'] ) ) {

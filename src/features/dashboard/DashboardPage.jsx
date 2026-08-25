@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Zap, Loader2, CheckCircle2 } from 'lucide-react';
 import { StatsCards } from './StatsCards';
+import { ReductionDonut } from '../../components/charts/ReductionDonut';
 import { CompatibilityPanel } from '../compatibility/CompatibilityPanel';
 import { api } from '../../api/client';
 import { useApi } from '../../hooks/useApi';
@@ -65,6 +66,8 @@ export function DashboardPage() {
       </div>
 
       <StatsCards />
+
+      <ReductionDonut />
 
       <AutomationStatus />
 

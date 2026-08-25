@@ -108,14 +108,10 @@ class Scanner {
 			'order'          => 'ASC',
 		);
 
-		if ( 'unoptimized' === $args['scope'] ) {
-			$query_args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery
-				array(
-					'key'     => '_optipress_optimized',
-					'compare' => 'NOT EXISTS',
-				),
-			);
-		}
+		// NOTE: the "unoptimized" scope intentionally does NOT filter by the
+		// `_optipress_optimized` meta. Instead, `is_optimizable()` below skips
+		// any already-WebP/AVIF file, so a non-WebP image is always treated as
+		// "not optimized" and gets enqueued for conversion.
 
 		return get_posts( $query_args );
 	}
@@ -199,6 +195,14 @@ class Scanner {
 			return false;
 		}
 		$mime = wp_get_image_mime( $path );
-		return in_array( $mime, array( 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif' ), true );
+		if ( ! in_array( $mime, array( 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif' ), true ) ) {
+			return false;
+		}
+		// Already in a modern format (WebP/AVIF) is considered optimized.
+		$ext = strtolower( pathinfo( $path, PATHINFO_EXTENSION ) );
+		if ( in_array( $ext, array( 'webp', 'avif' ), true ) ) {
+			return false;
+		}
+		return true;
 	}
 }
