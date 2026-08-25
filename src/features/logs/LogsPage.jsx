@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ScrollText, Trash2, Loader2, Terminal } from 'lucide-react';
-import { Card } from '../../components/ui/Card';
+// The log terminal intentionally stays dark in both light and dark themes, so it
+// uses a self-contained dark <div> rather than <Card> (which always forces bg-white).
 import { useApi } from '../../hooks/useApi';
 import { api } from '../../api/client';
 
@@ -118,7 +119,7 @@ export function LogsPage() {
         })}
       </div>
 
-      <Card className="overflow-hidden border-ink-800 bg-[#0b1120]">
+      <div className="overflow-hidden rounded-2xl border border-ink-800 bg-[#0b1120] shadow-sm">
         <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-2">
           <div className="flex items-center gap-2 text-slate-300">
             <Terminal size={15} className="text-slate-500" />
@@ -145,7 +146,7 @@ export function LogsPage() {
               </div>
             )}
           </div>
-      </Card>
+      </div>
     </div>
   );
 }
