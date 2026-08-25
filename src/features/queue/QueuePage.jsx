@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Play,
   Pause,
@@ -110,6 +110,18 @@ export function QueuePage() {
   const completed = Number(stats.completed) || 0;
   const total = Number(stats.total) || 0;
   const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  // Keep the control status and progress in sync while the queue is active,
+  // so the Start/Pause button automatically reverts to "شروع" when done.
+  useEffect(() => {
+    if (!data) return;
+    const active =
+      data.control?.status === 'running' ||
+      (Number(stats.pending) || 0) + (Number(stats.processing) || 0) > 0;
+    if (!active) return;
+    const id = setInterval(() => refresh(), 2500);
+    return () => clearInterval(id);
+  }, [data, refresh, stats.pending, stats.processing]);
 
   return (
     <div className="space-y-6">

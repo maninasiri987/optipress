@@ -83,12 +83,41 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-ink-900">مرکز بهینه‌سازی تصاویر</h1>
-        <p className="mt-1 text-sm text-ink-500">
-          آمار واقعی از وضعیت بهینه‌سازی کتابخانه رسانه ووکامرس شما.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-ink-900">مرکز بهینه‌سازی تصاویر</h1>
+          <p className="mt-1 text-sm text-ink-500">
+            آمار واقعی از وضعیت بهینه‌سازی کتابخانه رسانه ووکامرس شما.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={startNow}
+          disabled={busy}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60"
+        >
+          {busy ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+          {busy ? 'در حال آغاز…' : 'شروع بهینه‌سازی همین حالا'}
+        </button>
       </div>
+
+      {(done || error) && (
+        <div
+          className={`op-toast rounded-xl border px-4 py-3 text-sm ${
+            error
+              ? 'border-rose-200 bg-rose-50 text-rose-700'
+              : 'border-green-200 bg-green-50 text-green-700'
+          }`}
+        >
+          {error ? (
+            error
+          ) : (
+            <span className="inline-flex items-center gap-1">
+              <CheckCircle2 size={14} /> اسکن انجام شد و پردازش آغاز گردید.
+            </span>
+          )}
+        </div>
+      )}
 
       <StatsCards />
 
@@ -109,12 +138,6 @@ export function DashboardPage() {
                 اسکن، برآورد و بهینه‌سازی گروهی در پس‌زمینه و بدون نیاز به باز بودن
                 مرورگر.
               </p>
-              {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}
-              {done && (
-                <p className="mt-2 inline-flex items-center gap-1 text-xs text-green-600">
-                  <CheckCircle2 size={14} /> اسکن انجام شد و پردازش آغاز گردید.
-                </p>
-              )}
             </div>
             <button
               type="button"
