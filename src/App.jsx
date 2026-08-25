@@ -46,13 +46,9 @@ export default function App() {
       {/* Fixed right sidebar (RTL). */}
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-l border-ink-200 bg-white md:flex">
         <div className="flex items-center gap-2 px-5 py-5">
-          {iconUrl ? (
-            <img src={iconUrl} alt="OptiPress" className="h-9 w-9 rounded-xl" />
-          ) : (
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white">
-              <LayoutDashboard size={18} />
-            </span>
-          )}
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white">
+            <LayoutDashboard size={18} />
+          </span>
           <span className="text-lg font-bold text-ink-900">OptiPress</span>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
