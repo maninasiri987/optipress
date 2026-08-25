@@ -16,7 +16,8 @@ export function formatNumber(value) {
 
 // Format a percentage value, e.g. 61.2 -> "۶۱٫۲٪".
 export function formatPercent(value) {
-  const n = Number(value) || 0;
+  // Round to at most 1 decimal so animated/float values never show long trails.
+  const n = Math.round((Number(value) || 0) * 10) / 10;
   // Persian decimal separator is U+066B (٫).
   const text = toPersianDigits(String(n).replace('.', '٫'));
   return `${text}٪`;

@@ -6,6 +6,7 @@ import { api } from '../../api/client';
 import { formatBytes, formatPercent } from '../../lib/format';
 
 // Smoothly animates from 0 to `target` using an ease-out cubic over `duration` ms.
+// Rounded to 1 decimal so the visible number never shows full float precision.
 function useAnimatedValue(target, duration = 900) {
   const [value, setValue] = useState(0);
   useEffect(() => {
@@ -14,7 +15,7 @@ function useAnimatedValue(target, duration = 900) {
     const tick = (now) => {
       const t = Math.min(1, (now - start) / duration);
       const eased = 1 - Math.pow(1 - t, 3);
-      setValue(target * eased);
+      setValue(Math.round(target * eased * 10) / 10);
       if (t < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
