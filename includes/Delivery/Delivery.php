@@ -63,7 +63,23 @@ class Delivery {
 			return $content;
 		}
 
+		// Protect any existing <picture> blocks so we never nest them.
+		$stash = array();
+		$content = preg_replace_callback(
+			'/<picture\b.*?<\/picture>/is',
+			static function ( $m ) use ( &$stash ) {
+				$stash[] = $m[0];
+				return '<!--optipress-picture-' . ( count( $stash ) - 1 ) . '-->';
+			},
+			$content
+		);
+
 		$content = preg_replace_callback( '/<img\b[^>]*>/i', array( $this, 'wrap_img_tag' ), $content );
+
+		foreach ( $stash as $i => $html ) {
+			$content = str_replace( '<!--optipress-picture-' . $i . '-->', $html, $content );
+		}
+
 		return $content;
 	}
 
@@ -79,13 +95,15 @@ class Delivery {
 		$src     = '';
 		$srcset  = '';
 		$sizes   = '';
-		if ( preg_match( '/\bsrc=["\']([^"\']+)["\']/i', $tag, $m ) ) {
+		// (?<![\w-]) prevents matching lazy-load attributes like data-src /
+		// data-srcset (a plain \b matches between "-" and "s").
+		if ( preg_match( '/(?<![\w-])src=["\']([^"\']+)["\']/i', $tag, $m ) ) {
 			$src = $m[1];
 		}
-		if ( preg_match( '/\bsrcset=["\']([^"\']+)["\']/i', $tag, $m ) ) {
+		if ( preg_match( '/(?<![\w-])srcset=["\']([^"\']+)["\']/i', $tag, $m ) ) {
 			$srcset = $m[1];
 		}
-		if ( preg_match( '/\bsizes=["\']([^"\']+)["\']/i', $tag, $m ) ) {
+		if ( preg_match( '/(?<![\w-])sizes=["\']([^"\']+)["\']/i', $tag, $m ) ) {
 			$sizes = $m[1];
 		}
 

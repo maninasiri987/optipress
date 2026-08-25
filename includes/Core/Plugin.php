@@ -59,6 +59,9 @@ class Plugin {
 			basename( OPTIPRESS_DIR ) . '/languages'
 		);
 
+		// Bring the queue schema up to date (cheap no-op when current).
+		\OptiPress\Queue\QueueManager::maybe_upgrade();
+
 		$this->modules['logger']         = Logger::instance();
 		$this->modules['system_checker'] = new SystemChecker();
 		$this->modules['admin']          = new AdminPage();
@@ -74,6 +77,15 @@ class Plugin {
 				$module->register();
 			}
 		}
+
+		// Purge backups when their attachment is deleted (no orphans).
+		add_action(
+			'delete_attachment',
+			static function ( $attachment_id ) {
+				( new \OptiPress\Backup\BackupManager() )->delete_backup_dir( (int) $attachment_id );
+			},
+			20
+		);
 
 		( new Settings() )->register();
 	}

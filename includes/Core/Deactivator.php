@@ -22,10 +22,10 @@ class Deactivator {
 	 * @return void
 	 */
 	public static function deactivate() {
-		$timestamp = wp_next_scheduled( 'optipress_process_queue' );
-		if ( $timestamp ) {
-			wp_unschedule_event( $timestamp, 'optipress_process_queue' );
-		}
+		// Remove every occurrence (not just the next one) and reset control
+		// so a reactivation starts from a clean, stopped state.
+		wp_clear_scheduled_hook( \OptiPress\Scheduler\Scheduler::HOOK );
+		update_option( 'optipress_control', array( 'status' => 'stopped', 'updated_at' => time() ) );
 
 		flush_rewrite_rules();
 	}

@@ -42,11 +42,17 @@ class SystemChecker {
 	/**
 	 * Overall status: true if environment is usable.
 	 *
+	 * Imagick is deliberately excluded: GD is a fully supported engine, so an
+	 * Imagick-less host must not be reported as unusable.
+	 *
 	 * @return bool
 	 */
 	public function is_ok() {
 		$checks = $this->check();
-		foreach ( $checks as $check ) {
+		foreach ( $checks as $key => $check ) {
+			if ( 'imagick' === $key ) {
+				continue;
+			}
 			if ( empty( $check['ok'] ) ) {
 				return false;
 			}
@@ -116,13 +122,15 @@ class SystemChecker {
 	 * @return array<string, mixed>
 	 */
 	private function check_memory() {
-		$limit = wp_convert_hr_to_bytes( ini_get( 'memory_limit' ) );
+		$raw   = (string) ini_get( 'memory_limit' );
+		// '' means no directive / unlimited, same as -1 — don't flag as "too low".
+		$limit = ( '' === $raw || '-1' === $raw ) ? -1 : wp_convert_hr_to_bytes( $raw );
 		$ok    = $limit >= 64 * 1024 * 1024 || -1 === $limit;
 		$msg   = $ok ? '' : __( 'محدودیت حافظه کم است. حداقل ۶۴ مگابایت توصیه می‌شود.', 'optipress' );
 		return array(
 			'label'   => __( 'حافظه', 'optipress' ),
 			'ok'      => $ok,
-			'value'   => ini_get( 'memory_limit' ),
+			'value'   => $raw,
 			'message' => $msg,
 		);
 	}

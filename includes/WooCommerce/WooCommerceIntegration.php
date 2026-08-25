@@ -70,7 +70,10 @@ class WooCommerceIntegration {
 		$target = (string) optipress_get_option( 'convert_to', 'webp' );
 		foreach ( array_unique( $ids ) as $id ) {
 			$path = get_attached_file( $id );
-			if ( $path ) {
+			// Gate on real image mime: galleries can contain PDFs/videos, and
+			// enqueueing those would either fail repeatedly or (with
+			// ImageMagick+Ghostscript) rasterize a document page.
+			if ( $path && wp_get_image_mime( $path ) ) {
 				$queue->enqueue( $id, $path, $target );
 			}
 		}

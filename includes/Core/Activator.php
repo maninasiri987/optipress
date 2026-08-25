@@ -24,7 +24,7 @@ class Activator {
 	 * @return void
 	 */
 	public static function activate() {
-		QueueManager::install_table();
+		QueueManager::maybe_upgrade();
 		self::install_options();
 		self::schedule_cron();
 
@@ -65,18 +65,36 @@ class Activator {
 		}
 
 		if ( false === get_option( 'optipress_db_version' ) ) {
-			add_option( 'optipress_db_version', OPTIPRESS_VERSION );
+			add_option( 'optipress_db_version', QueueManager::DB_VERSION );
 		}
 	}
 
 	/**
 	 * Register the background processing cron schedule.
 	 *
+	 * The activation request never runs this plugin's plugins_loaded
+	 * bootstrap, so the custom recurrence is not registered yet — register it
+	 * here or wp_schedule_event() silently fails and background processing
+	 * never starts.
+	 *
 	 * @return void
 	 */
 	private static function schedule_cron() {
-		if ( ! wp_next_scheduled( 'optipress_process_queue' ) ) {
-			wp_schedule_event( time(), 'optipress_every_minute', 'optipress_process_queue' );
+		add_filter(
+			'cron_schedules',
+			static function ( $schedules ) {
+				if ( ! isset( $schedules['optipress_every_minute'] ) ) {
+					$schedules['optipress_every_minute'] = array(
+						'interval' => 60,
+						'display'  => __( 'هر دقیقه (OptiPress)', 'optipress' ),
+					);
+				}
+				return $schedules;
+			}
+		);
+
+		if ( ! wp_next_scheduled( \OptiPress\Scheduler\Scheduler::HOOK ) ) {
+			wp_schedule_event( time() + MINUTE_IN_SECONDS, 'optipress_every_minute', \OptiPress\Scheduler\Scheduler::HOOK );
 		}
 	}
 }

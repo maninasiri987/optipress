@@ -204,14 +204,19 @@ class MediaLibrary {
 
         global $wpdb;
         $table = QueueManager::table();
-        $clauses['join'] .= " LEFT JOIN {$table} oq ON oq.attachment_id = {$wpdb->posts}.ID";
+        // Aggregate per attachment: an attachment can have rows for multiple
+        // target formats, and a plain JOIN would duplicate list rows.
+        $clauses['join']    .= " LEFT JOIN ( SELECT attachment_id, MAX(status = 'completed') AS op_done, MAX(status = 'failed') AS op_failed FROM {$table} GROUP BY attachment_id ) oq ON oq.attachment_id = {$wpdb->posts}.ID";
+        $clauses['groupby'] = isset( $clauses['groupby'] ) && '' !== trim( (string) $clauses['groupby'] )
+            ? $clauses['groupby']
+            : "{$wpdb->posts}.ID";
 
         if ( 'optimized' === $filter ) {
-            $clauses['where'] .= " AND oq.status = 'completed'";
+            $clauses['where'] .= ' AND oq.op_done = 1';
         } elseif ( 'failed' === $filter ) {
-            $clauses['where'] .= " AND oq.status = 'failed'";
+            $clauses['where'] .= ' AND oq.op_failed = 1';
         } else {
-            $clauses['where'] .= " AND {$wpdb->posts}.post_mime_type LIKE 'image/%' AND (oq.status IS NULL OR oq.status != 'completed')";
+            $clauses['where'] .= " AND {$wpdb->posts}.post_mime_type LIKE 'image/%' AND oq.op_done = 0";
         }
 
         return $clauses;

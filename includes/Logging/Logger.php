@@ -64,6 +64,7 @@ class Logger {
 		$debug = (bool) optipress_get_option( 'debug_logging', false );
 		if ( ! $debug && 'info' === $level ) {
 			// Non-debug mode keeps only meaningful events to avoid noise.
+			return;
 		}
 
 		$entry = array(

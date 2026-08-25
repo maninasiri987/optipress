@@ -58,10 +58,9 @@ class UploadWatcher {
 		$queue  = new QueueManager();
 		$queue->enqueue( $attachment_id, $path, $target );
 
-		// Wake the scheduler so the cron drains the queue (respecting window).
-		$control = $queue->get_control();
-		if ( 'stopped' === $control['status'] ) {
-			$queue->set_control( 'running' );
-		}
+		// Deliberately do NOT flip control state here: an explicit user Stop
+		// (or auto-stop) must not be overridden by a background upload. The
+		// cron picks up newly enqueued items on its own whenever the user has
+		// processing enabled.
 	}
 }

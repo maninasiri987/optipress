@@ -51,7 +51,10 @@ class Scanner {
 		$skipped  = 0;
 		$already  = 0;
 
-		$queue = new QueueManager();
+		$queue   = new QueueManager();
+		// Prefetch existing queue rows once — avoids two queries per attachment
+		// (N+1) on large libraries.
+		$status_map = $queue->get_status_map( $attachment_ids );
 
 		foreach ( $attachment_ids as $attachment_id ) {
 			$scanned++;
@@ -66,9 +69,18 @@ class Scanner {
 				continue;
 			}
 
+			// "Above size" scope: only images larger than the threshold.
+			if ( 'above_size' === $args['scope'] && $args['min_size_mb'] > 0 ) {
+				$bytes = @filesize( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+				if ( false === $bytes || $bytes < (int) round( $args['min_size_mb'] * MB_IN_BYTES ) ) {
+					$skipped++;
+					continue;
+				}
+			}
+
 			// Already in the queue (pending/processing/completed) — not an error,
 			// just don't double-add it.
-			if ( $queue->is_queued( $attachment_id ) ) {
+			if ( isset( $status_map[ (int) $attachment_id ] ) ) {
 				$already++;
 				continue;
 			}
@@ -114,6 +126,7 @@ class Scanner {
 			'post_type'      => 'attachment',
 			'post_status'    => 'inherit',
 			'posts_per_page' => $args['limit'] > 0 ? (int) $args['limit'] : 500,
+			'paged'          => 1,
 			'fields'         => 'ids',
 			'post_mime_type' => $this->mime_filter( $args ),
 			'orderby'        => 'ID',
@@ -125,7 +138,26 @@ class Scanner {
 		// any already-WebP/AVIF file, so a non-WebP image is always treated as
 		// "not optimized" and gets enqueued for conversion.
 
-		return get_posts( $query_args );
+		// Page through the whole library instead of silently truncating at one
+		// request's worth of posts.
+		$all_ids = array();
+		do {
+			$query   = new \WP_Query( $query_args );
+			$page_ids = $query->posts;
+			if ( ! empty( $page_ids ) ) {
+				$all_ids = array_merge( $all_ids, $page_ids );
+			}
+			++$query_args['paged'];
+			$more = ( $args['limit'] > 0 )
+				? count( $all_ids ) < (int) $args['limit'] && $query->max_num_pages >= $query_args['paged'] - 1
+				: count( $page_ids ) > 0;
+		} while ( $more );
+
+		if ( $args['limit'] > 0 ) {
+			$all_ids = array_slice( $all_ids, 0, (int) $args['limit'] );
+		}
+
+		return $all_ids;
 	}
 
 	/**
@@ -148,37 +180,75 @@ class Scanner {
 	/**
 	 * Collect attachment IDs that belong to WooCommerce products.
 	 *
+	 * Pages through every product (no silent cap) and includes variation
+	 * featured images, which live on product_variation posts.
+	 *
 	 * @return array<int>
 	 */
 	private function product_attachment_ids() {
 		$ids = array();
 
-		$products = get_posts(
-			array(
-				'post_type'      => 'product',
-				'post_status'    => 'any',
-				'posts_per_page' => 500,
-				'fields'         => 'ids',
-			)
-		);
+		$paged = 1;
+		do {
+			$products = get_posts(
+				array(
+					'post_type'      => 'product',
+					'post_status'    => 'any',
+					'posts_per_page' => 500,
+					'paged'          => $paged,
+					'fields'         => 'ids',
+				)
+			);
 
-		foreach ( $products as $product_id ) {
-			$thumb = (int) get_post_thumbnail_id( $product_id );
-			if ( $thumb ) {
-				$ids[] = $thumb;
-			}
-			$gallery = get_post_meta( $product_id, '_product_image_gallery', true );
-			if ( $gallery ) {
-				foreach ( explode( ',', $gallery ) as $gid ) {
-					$gid = (int) $gid;
-					if ( $gid ) {
-						$ids[] = $gid;
+			foreach ( $products as $product_id ) {
+				$thumb = (int) get_post_thumbnail_id( $product_id );
+				if ( $thumb ) {
+					$ids[] = $thumb;
+				}
+				$gallery = get_post_meta( $product_id, '_product_image_gallery', true );
+				if ( $gallery ) {
+					foreach ( explode( ',', $gallery ) as $gid ) {
+						$gid = (int) $gid;
+						if ( $gid ) {
+							$ids[] = $gid;
+						}
 					}
 				}
 			}
+
+			++$paged;
+			$more = count( $products ) === 500;
+		} while ( $more );
+
+		// Variable-product variations store their image as the variation's
+		// featured image.
+		if ( post_type_exists( 'product_variation' ) ) {
+			$paged = 1;
+			do {
+				$variations = get_posts(
+					array(
+						'post_type'      => 'product_variation',
+						'post_status'    => 'any',
+						'posts_per_page' => 500,
+						'paged'          => $paged,
+						'fields'         => 'ids',
+						'meta_key'       => '_thumbnail_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+					)
+				);
+
+				foreach ( $variations as $variation_id ) {
+					$thumb = (int) get_post_thumbnail_id( $variation_id );
+					if ( $thumb ) {
+						$ids[] = $thumb;
+					}
+				}
+
+				++$paged;
+				$more = count( $variations ) === 500;
+			} while ( $more );
 		}
 
-		return array_values( array_unique( $ids ) );
+		return array_values( array_unique( array_filter( $ids ) ) );
 	}
 
 	/**

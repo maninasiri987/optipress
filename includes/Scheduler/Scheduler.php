@@ -66,9 +66,19 @@ class Scheduler {
 
 		// 'immediate' mode, or 'automatic' inside the window: process a batch.
 		$processor = new Processor();
-		$summary = $processor->process_batch();
+		$summary   = $processor->process_batch();
 
-		optipress_log( 'info', __( 'پردازش زمان‌بندی‌شده اجرا شد.', 'optipress' ), $summary );
+		// Only log when actual work happened — a per-minute tick with zero
+		// items would otherwise flood the log ring buffer.
+		if ( (int) $summary['processed'] > 0 ) {
+			optipress_log( 'info', __( 'پردازش زمان‌بندی‌شده اجرا شد.', 'optipress' ), $summary );
+		}
+
+		// Self-heal: make sure the next tick is always scheduled even if the
+		// original activation-time schedule was lost.
+		if ( ! wp_next_scheduled( self::HOOK ) ) {
+			wp_schedule_event( time() + MINUTE_IN_SECONDS, 'optipress_every_minute', self::HOOK );
+		}
 
 		// Auto-stop when nothing remains.
 		if ( (int) $queue->count_by_status( 'pending' ) === 0 && (int) $queue->count_by_status( 'processing' ) === 0 ) {
@@ -99,7 +109,11 @@ class Scheduler {
 			'sat' => 'sat',
 			'sun' => 'sun',
 		);
-		if ( ! empty( $days ) && ! in_array( $day_map[ $today ], $days, true ) ) {
+		// An empty day selection means the user asked for "no scheduled runs".
+		if ( empty( $days ) ) {
+			return false;
+		}
+		if ( ! in_array( $day_map[ $today ], $days, true ) ) {
 			return false;
 		}
 

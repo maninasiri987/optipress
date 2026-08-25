@@ -137,6 +137,8 @@ class Settings {
 		if ( ! is_array( $value ) ) {
 			return $allowed;
 		}
-		return array_values( array_intersect( $allowed, $value ) );
+		// Coerce scalars only — nested arrays from hostile payloads would
+		// otherwise raise "Array to string conversion" warnings.
+		return array_values( array_intersect( $allowed, array_map( 'strval', array_filter( $value, 'is_scalar' ) ) ) );
 	}
 }

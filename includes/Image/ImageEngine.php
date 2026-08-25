@@ -78,6 +78,14 @@ class ImageEngine {
 			return $result;
 		}
 
+		// Animated GIFs would be flattened to a single frame by both GD and
+		// our static Imagick pipeline — never risk destroying them.
+		if ( 'image/gif' === wp_get_image_mime( $source_path ) ) {
+			$result['skipped'] = true;
+			$result['reason']  = __( 'تصاویر GIF برای جلوگیری از حذف انیمیشن رد شدند.', 'optipress' );
+			return $result;
+		}
+
 		if ( ! wp_is_writable( dirname( $source_path ) ) ) {
 			$result['reason'] = __( 'مجوز نوشتن روی پوشه تصویر وجود ندارد.', 'optipress' );
 			return $result;
@@ -221,6 +229,7 @@ class ImageEngine {
 	 * @return bool
 	 */
 	private function process_imagick( $source_path, $temp_path, $options, $target_mime ) {
+		$image = null;
 		try {
 			$image = new \Imagick( $source_path );
 
@@ -229,18 +238,20 @@ class ImageEngine {
 			}
 
 			$geo = $image->getImageGeometry();
-			$new_w = $geo['width'];
-			$new_h = $geo['height'];
 
-			if ( $options['max_width'] > 0 && $new_w > $options['max_width'] ) {
-				$new_w = $options['max_width'];
+			// Preserve aspect ratio, never upscale.
+			$scale = 1;
+			if ( $options['max_width'] > 0 && $geo['width'] > $options['max_width'] ) {
+				$scale = min( $scale, $options['max_width'] / $geo['width'] );
 			}
-			if ( $options['max_height'] > 0 && $new_h > $options['max_height'] ) {
-				$new_h = $options['max_height'];
+			if ( $options['max_height'] > 0 && $geo['height'] > $options['max_height'] ) {
+				$scale = min( $scale, $options['max_height'] / $geo['height'] );
 			}
 
-			if ( $new_w !== $geo['width'] || $new_h !== $geo['height'] ) {
-				$image->resizeImage( $new_w, $new_h, \Imagick::FILTER_LANCZOS, 1, false );
+			if ( $scale < 1 ) {
+				$new_w = max( 1, (int) round( $geo['width'] * $scale ) );
+				$new_h = max( 1, (int) round( $geo['height'] * $scale ) );
+				$image->resizeImage( $new_w, $new_h, \Imagick::FILTER_LANCZOS, 1, true );
 			}
 
 			$image->setImageFormat( $this->ext_for_mime( $target_mime ) );
@@ -251,14 +262,15 @@ class ImageEngine {
 				$image->setImageAlphaChannel( \Imagick::ALPHACHANNEL_ACTIVATE );
 			}
 
-			if ( ! $image->writeImage( $temp_path ) ) {
-				$image->clear();
-				return false;
-			}
-			$image->clear();
-			return true;
+			$ok = (bool) $image->writeImage( $temp_path );
+			return $ok;
 		} catch ( \Throwable $e ) {
 			return false;
+		} finally {
+			if ( isset( $image ) && $image instanceof \Imagick ) {
+				$image->clear();
+				$image->destroy();
+			}
 		}
 	}
 
@@ -299,6 +311,14 @@ class ImageEngine {
 
 		if ( empty( $src ) ) {
 			return false;
+		}
+
+		// Preserve transparency for formats that carry an alpha channel —
+		// required on BOTH the resize path and the passthrough encode below
+		// (without it, imagewebp/imagepng render transparent areas black).
+		if ( in_array( $original_mime, array( 'image/png', 'image/webp', 'image/gif', 'image/avif' ), true ) ) {
+			imagealphablending( $src, false );
+			imagesavealpha( $src, true );
 		}
 
 		$src_w = imagesx( $src );
@@ -397,6 +417,16 @@ class ImageEngine {
 		// Regenerate metadata (and sub-sizes) from the optimized main file.
 		$meta = wp_generate_attachment_metadata( $attachment_id, $new_path );
 		if ( empty( $meta ) || ! is_array( $meta ) ) {
+			// Roll the pointers back to the original file (which still exists)
+			// so attachment data never ends up half-pointing at WebP.
+			$old_relative = str_replace( wp_upload_dir()['basedir'] . '/', '', $old_path );
+			update_post_meta( $attachment_id, '_wp_attached_file', $old_relative );
+			wp_update_post(
+				array(
+					'ID'             => $attachment_id,
+					'post_mime_type' => wp_get_image_mime( $old_path ),
+				)
+			);
 			return;
 		}
 

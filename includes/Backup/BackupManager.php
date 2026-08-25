@@ -56,6 +56,20 @@ class BackupManager {
 			return false;
 		}
 
+		// Never let a re-optimization overwrite the pristine original: if we
+		// already hold a raster-format backup and the current file is a
+		// converted WebP/AVIF, the existing backup IS the original — keep it.
+		$existing   = $this->latest_backup( $attachment_id );
+		$src_ext    = strtolower( pathinfo( $source_path, PATHINFO_EXTENSION ) );
+		if ( $existing ) {
+			$existing_ext = strtolower( pathinfo( $existing, PATHINFO_EXTENSION ) );
+			$is_raster    = in_array( $existing_ext, array( 'jpg', 'jpeg', 'png', 'gif' ), true );
+			$is_modern    = in_array( $src_ext, array( 'webp', 'avif' ), true );
+			if ( $is_raster && $is_modern ) {
+				return $existing;
+			}
+		}
+
 		$ext  = pathinfo( $source_path, PATHINFO_EXTENSION ) ?: 'img';
 		$name = 'original-' . time() . '.' . $ext;
 		$dest = $dir . '/' . $name;
@@ -169,20 +183,51 @@ class BackupManager {
 	}
 
 	/**
-	 * Remove older backups for an attachment, keeping only the newest.
+	 * Remove redundant backups for an attachment, keeping the newest within
+	 * each format family. Backups from a different family (e.g. the pristine
+	 * JPG next to an AVIF-generation backup) are never pruned.
 	 *
 	 * @param int    $attachment_id Attachment ID.
 	 * @param string $keep          Path to keep.
 	 * @return void
 	 */
 	private function cleanup( $attachment_id, $keep ) {
-		$dir   = $this->attachment_dir( $attachment_id );
-		$files = glob( $dir . '/original-*.*' ) ?: array();
-		foreach ( $files as $file ) {
-			if ( $file !== $keep ) {
+		$dir      = $this->attachment_dir( $attachment_id );
+		$keep_ext = strtolower( pathinfo( $keep, PATHINFO_EXTENSION ) );
+		$raster   = array( 'jpg', 'jpeg', 'png', 'gif' );
+
+		foreach ( glob( $dir . '/original-*.*' ) ?: array() as $file ) {
+			if ( $file === $keep ) {
+				continue;
+			}
+			$ext = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
+			// Only prune within the same format family.
+			if ( in_array( $ext, $raster, true ) === in_array( $keep_ext, $raster, true ) ) {
 				@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 			}
 		}
+	}
+
+	/**
+	 * Recursively delete an attachment's entire backup directory.
+	 *
+	 * Hooked to attachment deletion so deleted media does not leave orphaned
+	 * copies (and retained personal data) behind forever.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return void
+	 */
+	public function delete_backup_dir( $attachment_id ) {
+		$dir = $this->attachment_dir( (int) $attachment_id );
+		if ( ! is_dir( $dir ) ) {
+			return;
+		}
+		foreach ( glob( $dir . '/*' ) ?: array() as $file ) {
+			if ( is_file( $file ) ) {
+				@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+			}
+		}
+		@rmdir( $dir ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 	}
 
 	/**

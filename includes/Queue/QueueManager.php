@@ -19,15 +19,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class QueueManager {
 
-	/**
-	 * Table name (without prefix).
-	 *
-	 * @var string
-	 */
-	const TABLE = 'optipress_queue';
+	const TABLE       = 'optipress_queue';
+	const DB_VERSION  = '2.0.0';
 
 	/**
-	 * Create the queue table. Safe to call repeatedly.
+	 * Create the queue table. Safe to call repeatedly (uses dbDelta's own
+	 * existence checks — do not add "IF NOT EXISTS", which breaks dbDelta's
+	 * schema diffing).
 	 *
 	 * @return void
 	 */
@@ -37,10 +35,10 @@ class QueueManager {
 		$table   = $wpdb->prefix . self::TABLE;
 		$collate = $wpdb->get_charset_collate();
 
-		$sql = "CREATE TABLE IF NOT EXISTS {$table} (
+		$sql = "CREATE TABLE {$table} (
 			id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			attachment_id   BIGINT UNSIGNED NOT NULL,
-			source_path     VARCHAR(191)    NOT NULL,
+			source_path     TEXT            NOT NULL,
 			source_mime     VARCHAR(100)    NOT NULL DEFAULT '',
 			source_size     BIGINT UNSIGNED NOT NULL DEFAULT 0,
 			source_width    INT UNSIGNED    NOT NULL DEFAULT 0,
@@ -48,6 +46,7 @@ class QueueManager {
 			target_format   VARCHAR(20)     NOT NULL DEFAULT 'original',
 			status          VARCHAR(20)     NOT NULL DEFAULT 'pending',
 			attempts        TINYINT UNSIGNED NOT NULL DEFAULT 0,
+			claim_token     VARCHAR(64)     NOT NULL DEFAULT '',
 			error_message   TEXT            NULL,
 			started_at      DATETIME        NULL,
 			completed_at    DATETIME        NULL,
@@ -61,11 +60,48 @@ class QueueManager {
 			KEY attachment_id (attachment_id),
 			KEY status (status),
 			KEY created_at (created_at),
+			KEY claim_token (claim_token),
 			UNIQUE KEY uq_attachment (attachment_id, target_format)
 		) {$collate};";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
+	}
+
+	/**
+	 * Bring an existing installation's table up to the current schema.
+	 * Runs explicit ALTERs (dbDelta cannot be trusted for upgrades) and is
+	 * cheap when already current.
+	 *
+	 * @return void
+	 */
+	public static function maybe_upgrade() {
+		$stored = get_option( 'optipress_db_version', '' );
+		if ( version_compare( (string) $stored, self::DB_VERSION, '>=' ) ) {
+			return;
+		}
+
+		self::install_table();
+
+		global $wpdb;
+		$table = self::table();
+
+		// claim_token column (atomic batch claiming).
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		if ( empty( $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'claim_token'" ) ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->query( "ALTER TABLE {$table} ADD COLUMN claim_token VARCHAR(64) NOT NULL DEFAULT '' AFTER attempts, ADD KEY claim_token (claim_token)" );
+		}
+
+		// Widen source_path: VARCHAR(191) truncates long absolute paths under strict SQL mode.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$col = $wpdb->get_row( "SHOW COLUMNS FROM {$table} LIKE 'source_path'" );
+		if ( $col && false !== stripos( (string) $col->Type, 'varchar(191)' ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->query( "ALTER TABLE {$table} MODIFY source_path TEXT NOT NULL" );
+		}
+
+		update_option( 'optipress_db_version', self::DB_VERSION );
 	}
 
 	/**
@@ -187,8 +223,11 @@ class QueueManager {
 	/**
 	 * Claim a batch of items for processing.
 	 *
-	 * Reclaims stale "processing" rows (started longer ago than the timeout)
-	 * before claiming pending items.
+	 * Reclaims stale "processing" rows (started longer ago than the timeout;
+	 * permanently failed once max_attempts is exhausted) before atomically
+	 * claiming pending items via a single UPDATE … LIMIT with a per-call
+	 * claim token, so concurrent workers (REST + cron) can never receive the
+	 * same rows.
 	 *
 	 * @param int $batch_size Number of items to claim.
 	 * @param int $timeout    Stale threshold in seconds.
@@ -198,32 +237,46 @@ class QueueManager {
 		global $wpdb;
 		$table = self::table();
 
-		// Recover stale processing items.
+		// Recover stale processing items — attempts already counted at claim
+		// time, so a worker that keeps dying eventually hits max_attempts and
+		// is parked as failed instead of looping forever.
+		$max_attempts = (int) optipress_get_option( 'max_attempts', 3 );
 		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
-				"UPDATE {$table} SET status = 'pending', started_at = NULL
-				WHERE status = 'processing' AND started_at < DATE_SUB(NOW(), INTERVAL %d SECOND)",
+				"UPDATE {$table} SET
+					status = IF( attempts >= %d, 'failed', 'pending' ),
+					error_message = IF( attempts >= %d, CONCAT( COALESCE( error_message, '' ), 'پردازش منقضی شد (timeout).' ), error_message ),
+					started_at = NULL,
+					claim_token = ''
+				WHERE status = 'processing' AND started_at < DATE_SUB( NOW(), INTERVAL %d SECOND )",
+				$max_attempts,
+				$max_attempts,
 				$timeout
 			)
 		);
 
-		$ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// Atomic claim: one UPDATE decides ownership; the token read-back
+		// returns exactly the rows this worker won.
+		$token = wp_generate_password( 40, false );
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
-				"SELECT id FROM {$table} WHERE status = 'pending' ORDER BY id ASC LIMIT %d",
+				"UPDATE {$table} SET status = 'processing', started_at = NOW(), attempts = attempts + 1, claim_token = %s
+				WHERE status = 'pending' ORDER BY id ASC LIMIT %d",
+				$token,
 				$batch_size
 			)
 		);
 
-		if ( ! empty( $ids ) ) {
-			$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
-			$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-				$wpdb->prepare(
-					"UPDATE {$table} SET status = 'processing', started_at = NOW(), attempts = attempts + 1
-					WHERE id IN ({$placeholders})",
-					...$ids
-				)
-			);
+		if ( ! $wpdb->rows_affected ) {
+			return array();
 		}
+
+		$ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT id FROM {$table} WHERE status = 'processing' AND claim_token = %s ORDER BY id ASC",
+				$token
+			)
+		);
 
 		return array_map( 'intval', $ids );
 	}
@@ -237,7 +290,7 @@ class QueueManager {
 	 */
 	public function complete( $id, array $result ) {
 		global $wpdb;
-		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			self::table(),
 			array(
 				'status'           => 'completed',
@@ -247,13 +300,16 @@ class QueueManager {
 				'optimization_ratio' => (float) $result['ratio'],
 				'completed_at'     => current_time( 'mysql' ),
 				'error_message'    => null,
+				'claim_token'      => '',
 			),
-			array( 'id' => $id ),
-			array( '%s', '%d', '%d', '%d', '%f', '%s', null ),
-			array( '%d' )
+			array( 'id' => $id, 'status' => 'processing' ),
+			array( '%s', '%d', '%d', '%d', '%f', '%s', null, '%s' ),
+			array( '%d', '%s' )
 		);
 
-		$this->mark_attachment_optimized( $id );
+		if ( $updated ) {
+			$this->mark_attachment_optimized( $id );
+		}
 	}
 
 	/**
@@ -267,25 +323,25 @@ class QueueManager {
 	public function fail( $id, $message, $max_attempts = 3 ) {
 		global $wpdb;
 		$item = $this->get_item( $id );
-		if ( ! $item ) {
-			return;
+		if ( ! $item || 'processing' !== $item['status'] ) {
+			return; // Lost ownership (stale worker) — never resurrect foreign rows.
 		}
 		$attempts = (int) $item['attempts'];
 		if ( $attempts >= $max_attempts ) {
 			$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				self::table(),
-				array( 'status' => 'failed', 'error_message' => $message, 'started_at' => null ),
-				array( 'id' => $id ),
-				array( '%s', '%s', null ),
-				array( '%d' )
+				array( 'status' => 'failed', 'error_message' => $message, 'started_at' => null, 'claim_token' => '' ),
+				array( 'id' => $id, 'status' => 'processing' ),
+				array( '%s', '%s', null, '%s' ),
+				array( '%d', '%s' )
 			);
 		} else {
 			$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				self::table(),
-				array( 'status' => 'pending', 'error_message' => $message, 'started_at' => null ),
-				array( 'id' => $id ),
-				array( '%s', '%s', null ),
-				array( '%d' )
+				array( 'status' => 'pending', 'error_message' => $message, 'started_at' => null, 'claim_token' => '' ),
+				array( 'id' => $id, 'status' => 'processing' ),
+				array( '%s', '%s', null, '%s' ),
+				array( '%d', '%s' )
 			);
 		}
 	}
@@ -301,10 +357,10 @@ class QueueManager {
 		global $wpdb;
 		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			self::table(),
-			array( 'status' => 'skipped', 'error_message' => $reason, 'completed_at' => current_time( 'mysql' ), 'started_at' => null ),
-			array( 'id' => $id ),
-			array( '%s', '%s', '%s', null ),
-			array( '%d' )
+			array( 'status' => 'skipped', 'error_message' => $reason, 'completed_at' => current_time( 'mysql' ), 'started_at' => null, 'claim_token' => '' ),
+			array( 'id' => $id, 'status' => 'processing' ),
+			array( '%s', '%s', '%s', null, '%s' ),
+			array( '%d', '%s' )
 		);
 	}
 
@@ -316,9 +372,7 @@ class QueueManager {
 	public function retry_failed() {
 		global $wpdb;
 		return (int) $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->prepare(
-				"UPDATE " . self::table() . " SET status = 'pending', error_message = NULL, started_at = NULL WHERE status = 'failed'"
-			)
+			"UPDATE " . self::table() . " SET status = 'pending', error_message = NULL, started_at = NULL WHERE status = 'failed'"
 		);
 	}
 
@@ -363,17 +417,21 @@ class QueueManager {
 			$params[] = '%' . $wpdb->esc_like( $filters['search'] ) . '%';
 		}
 
-		$total = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE {$where}", ...$params ) // phpcs:ignore
+		$count_sql = "SELECT COUNT(*) FROM {$table} WHERE {$where}";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$total = (int) $wpdb->get_var(
+			empty( $params ) ? $count_sql : $wpdb->prepare( $count_sql, ...$params )
 		);
 
-		$items = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->prepare(
-				"SELECT q.*, p.post_title AS title FROM {$table} q LEFT JOIN {$wpdb->posts} p ON p.ID = q.attachment_id WHERE {$where} ORDER BY q.id DESC LIMIT %d OFFSET %d",
-				array_merge( $params, array( (int) $filters['limit'], (int) $filters['offset'] ) )
-			),
-			ARRAY_A
-		);
+		$items = array();
+		if ( $total > 0 ) {
+			$list_sql = "SELECT q.*, p.post_title AS title FROM {$table} q LEFT JOIN {$wpdb->posts} p ON p.ID = q.attachment_id WHERE {$where} ORDER BY q.id DESC LIMIT %d OFFSET %d";
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$items = $wpdb->get_results(
+				$wpdb->prepare( $list_sql, array_merge( $params, array( (int) $filters['limit'], (int) $filters['offset'] ) ) ),
+				ARRAY_A
+			);
+		}
 
 		return array(
 			'items' => $items ?: array(),
@@ -432,14 +490,15 @@ class QueueManager {
 		$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			"SELECT
 				COUNT(*) AS total,
-				SUM(status = 'completed') AS completed,
-				SUM(status = 'pending') AS pending,
-				SUM(status = 'processing') AS processing,
-				SUM(status = 'failed') AS failed,
-				SUM(status = 'skipped') AS skipped,
-				SUM(original_size) AS original_total,
-				SUM(optimized_size) AS optimized_total,
-				SUM(saved_bytes) AS saved_total
+				COALESCE(SUM(status = 'completed'), 0) AS completed,
+				COALESCE(SUM(status = 'pending'), 0) AS pending,
+				COALESCE(SUM(status = 'processing'), 0) AS processing,
+				COALESCE(SUM(status = 'failed'), 0) AS failed,
+				COALESCE(SUM(status = 'skipped'), 0) AS skipped,
+				COALESCE(SUM(original_size), 0) AS original_total,
+				COALESCE(SUM(optimized_size), 0) AS optimized_total,
+				COALESCE(SUM(saved_bytes), 0) AS saved_total,
+				COALESCE(SUM(CASE WHEN status = 'completed' THEN original_size ELSE 0 END), 0) AS completed_original_total
 			FROM {$table}",
 			ARRAY_A
 		);
@@ -458,7 +517,9 @@ class QueueManager {
 			);
 		}
 
-		$original = (int) ( $row['original_total'] ?? 0 );
+		// Ratio is measured against completed rows only, otherwise pending /
+		// unprocessed sizes dilute the headline percentage.
+		$original = (int) ( $row['completed_original_total'] ?? 0 );
 		$saved    = (int) ( $row['saved_total'] ?? 0 );
 		$row['average_reduction'] = $original > 0 ? round( ( $saved / $original ) * 100, 1 ) : 0;
 
