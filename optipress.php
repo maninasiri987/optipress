@@ -92,6 +92,7 @@ register_activation_hook(
 	__FILE__,
 	static function () {
 		\OptiPress\Core\Activator::activate();
+		\OptiPress\Delivery\Delivery::install_rewrites();
 	}
 );
 

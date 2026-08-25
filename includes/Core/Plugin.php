@@ -67,6 +67,7 @@ class Plugin {
 		$this->modules['upload_watcher'] = new \OptiPress\Scanner\UploadWatcher();
 		$this->modules['woocommerce']    = new \OptiPress\WooCommerce\WooCommerceIntegration();
 		$this->modules['media_library']  = new \OptiPress\Media\MediaLibrary();
+		$this->modules['delivery']       = new \OptiPress\Delivery\Delivery();
 
 		foreach ( $this->modules as $module ) {
 			if ( method_exists( $module, 'register' ) ) {
