@@ -86,21 +86,34 @@ class BackupManager {
 			return false;
 		}
 
-		$dir = dirname( $current );
-		$ext = pathinfo( $backup, PATHINFO_EXTENSION );
+		$dir  = dirname( $current );
+		$ext  = pathinfo( $backup, PATHINFO_EXTENSION );
 		$base = pathinfo( $current, PATHINFO_FILENAME );
+		// Restore to the ORIGINAL filename/extension. Otherwise a converted
+		// ".webp" file would end up holding JPG content and be served with the
+		// wrong content-type (broken image).
 		$restored_path = $dir . '/' . $base . '.' . $ext;
 
 		if ( ! @copy( $backup, $restored_path ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors
 			return false;
 		}
 
-		// Keep the same filename when possible to preserve WordPress metadata.
-		if ( $restored_path !== $current && @rename( $restored_path, $current ) ) { // phpcs:ignore
-			$restored_path = $current;
+		// Remove the previously converted file if it had a different name.
+		if ( $restored_path !== $current && file_exists( $current ) ) {
+			@unlink( $current ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		}
 
-		$mime = wp_get_image_mime( $current );
+		// Remove converted sub-sizes left behind by optimization.
+		foreach ( array( 'webp', 'avif' ) as $cext ) {
+			foreach ( glob( $dir . '/' . $base . '-*.' . $cext ) ?: array() as $_f ) {
+				@unlink( $_f ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+			}
+		}
+
+		$relative = str_replace( wp_upload_dir()['basedir'] . '/', '', $restored_path );
+		update_post_meta( $attachment_id, '_wp_attached_file', $relative );
+
+		$mime = wp_get_image_mime( $restored_path );
 		wp_update_post(
 			array(
 				'ID'             => $attachment_id,
@@ -112,7 +125,7 @@ class BackupManager {
 		if ( function_exists( 'wp_generate_attachment_metadata' ) ) {
 			wp_update_attachment_metadata(
 				$attachment_id,
-				wp_generate_attachment_metadata( $attachment_id, $current )
+				wp_generate_attachment_metadata( $attachment_id, $restored_path )
 			);
 		}
 
