@@ -50,6 +50,40 @@
   color-scheme: light;
 }
 
+/* ---------------------------------------------------------------------------
+   Dark theme — single source of truth.
+   Tailwind v4 utilities (bg-*, text-*, border-*) read these CSS variables,
+   so remapping them inside `.dark` recolors the ENTIRE app (all tabs) without
+   needing per-component `dark:` variants. `applyTheme()` toggles `.dark` on
+   #optipress-root.
+--------------------------------------------------------------------------- */
+.dark {
+  color-scheme: dark;
+
+  --color-white: #0f172a;
+  --color-ink-50: #0b1120;
+  --color-ink-100: #111827;
+  --color-ink-200: #1f2937;
+  --color-ink-300: #334155;
+  --color-ink-400: #64748b;
+  --color-ink-500: #94a3b8;
+  --color-ink-600: #cbd5e1;
+  --color-ink-700: #e2e8f0;
+  --color-ink-800: #f1f5f9;
+  --color-ink-900: #f8fafc;
+
+  --color-brand-50: #15233b;
+  --color-brand-100: #1d3457;
+  --color-brand-200: #284b7d;
+  --color-brand-300: #356bb0;
+  --color-brand-400: #4f8de0;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2f6fe0;
+  --color-brand-700: #60a5fa;
+  --color-brand-800: #7cc0ff;
+  --color-brand-900: #a9d4ff;
+}
+
 html,
 body {
   margin: 0;
@@ -62,6 +96,14 @@ body {
   background: var(--color-ink-50);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Form controls ignore inherited font; force Vazir Matn everywhere. */
+#optipress-root input,
+#optipress-root select,
+#optipress-root textarea,
+#optipress-root button {
+  font-family: var(--font-sans);
 }
 
 /* Tabular figures for statistics so numbers align cleanly. */
