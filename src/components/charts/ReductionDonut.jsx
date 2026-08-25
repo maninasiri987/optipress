@@ -11,16 +11,17 @@ function Donut({ value, color }) {
     <div className="relative h-32 w-32 shrink-0">
       <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
         <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e2e8f0" strokeWidth="4" />
-        <circle
-          cx="18"
-          cy="18"
-          r="15.9155"
-          fill="none"
-          stroke={color}
-          strokeWidth="4"
-          strokeDasharray={`${v} 100`}
-          strokeLinecap="round"
-        />
+          <circle
+            cx="18"
+            cy="18"
+            r="15.9155"
+            fill="none"
+            stroke={color}
+            strokeWidth="4"
+            className="op-donut-value"
+            strokeDasharray={`${v} 100`}
+            strokeLinecap="round"
+          />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-2xl font-bold text-ink-900">{formatPercent(v / 100)}</span>
@@ -53,7 +54,7 @@ export function ReductionDonut() {
   const color = reduction >= 50 ? '#16a34a' : reduction >= 25 ? '#f59e0b' : '#3563f6';
 
   return (
-    <Card>
+    <Card className="op-anim">
       <CardBody>
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
           <Donut value={reduction} color={color} />

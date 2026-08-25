@@ -2,15 +2,9 @@ import React, { useState } from 'react';
 import {
   Play,
   Pause,
-  RotateCcw,
   Square,
-  Zap,
   Loader2,
   ArchiveRestore,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  RefreshCw,
 } from 'lucide-react';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -26,65 +20,36 @@ const STATUS_META = {
   skipped: { label: 'رد شده', tone: 'neutral' },
 };
 
-const CONTROL_META = {
-  running: { label: 'در حال اجرا', tone: 'green' },
-  paused: { label: 'مکث‌شده', tone: 'amber' },
-  stopped: { label: 'متوقف', tone: 'neutral' },
-};
-
 function ControlBar({ control, busy, onAction }) {
-  const meta = CONTROL_META[control] || CONTROL_META.stopped;
+  const running = control === 'running';
+  const paused = control === 'paused';
+
+  const primaryLabel = running ? 'مکث' : paused ? 'ادامه' : 'شروع';
+  const primaryIcon = running ? <Pause size={16} /> : <Play size={16} />;
+  const primaryAction = running ? 'pause' : paused ? 'resume' : 'start';
+
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Badge tone={meta.tone}>{meta.label}</Badge>
       <button
         type="button"
         disabled={busy}
-        onClick={() => onAction('start')}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+        onClick={() => onAction(primaryAction)}
+        className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:shadow-md disabled:opacity-60 ${
+          running
+            ? 'bg-amber-500 hover:bg-amber-600'
+            : 'bg-brand-600 hover:bg-brand-700'
+        }`}
       >
-        <Play size={14} /> شروع
-      </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => onAction('pause')}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-ink-300 px-3 py-1.5 text-xs font-medium text-ink-700 hover:bg-ink-100 disabled:opacity-60"
-      >
-        <Pause size={14} /> مکث
-      </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => onAction('resume')}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-ink-300 px-3 py-1.5 text-xs font-medium text-ink-700 hover:bg-ink-100 disabled:opacity-60"
-      >
-        <RotateCcw size={14} /> ادامه
+        {busy ? <Loader2 size={16} className="animate-spin" /> : primaryIcon}
+        {primaryLabel}
       </button>
       <button
         type="button"
         disabled={busy}
         onClick={() => onAction('stop')}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-ink-300 px-3 py-1.5 text-xs font-medium text-ink-700 hover:bg-ink-100 disabled:opacity-60"
+        className="inline-flex items-center gap-1.5 rounded-xl border border-ink-300 px-4 py-2.5 text-sm font-medium text-ink-700 transition-colors hover:bg-ink-100 disabled:opacity-60"
       >
-        <Square size={14} /> توقف
-      </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => onAction('retry')}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-ink-300 px-3 py-1.5 text-xs font-medium text-ink-700 hover:bg-ink-100 disabled:opacity-60"
-      >
-        <RefreshCw size={14} /> تلاش مجدد
-      </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => onAction('process')}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800 disabled:opacity-60"
-      >
-        {busy ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
-        پردازش دسته فعلی
+        <Square size={16} /> توقف
       </button>
     </div>
   );
@@ -157,7 +122,7 @@ export function QueuePage() {
 
       {toast && (
         <div
-          className={`rounded-xl border px-4 py-3 text-sm ${
+          className={`op-toast rounded-xl border px-4 py-3 text-sm ${
             toast.tone === 'rose'
               ? 'border-rose-200 bg-rose-50 text-rose-700'
               : 'border-green-200 bg-green-50 text-green-700'
@@ -167,36 +132,36 @@ export function QueuePage() {
         </div>
       )}
 
-      <Card>
+      <Card className="op-anim">
         <CardBody className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <ControlBar control={data?.control?.status} busy={busy} onAction={handleAction} />
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-ink-100">
-            <div className="h-full bg-brand-500 transition-all" style={{ width: `${progress}%` }} />
+          <div className="op-progress h-2 w-full overflow-hidden rounded-full bg-ink-100">
+            <div className="h-full bg-brand-500" style={{ width: `${progress}%` }} />
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-xl bg-ink-50 px-3 py-2">
               <p className="text-xs text-ink-500">کل</p>
-              <p className="text-base font-bold text-ink-900">{formatNumber(total)}</p>
+              <p className="op-numeric text-xl font-extrabold text-ink-900">{formatNumber(total)}</p>
             </div>
             <div className="rounded-xl bg-green-50 px-3 py-2">
               <p className="text-xs text-green-600">انجام‌شده</p>
-              <p className="text-base font-bold text-green-700">{formatNumber(completed)}</p>
+              <p className="op-numeric text-xl font-extrabold text-green-700">{formatNumber(completed)}</p>
             </div>
             <div className="rounded-xl bg-brand-50 px-3 py-2">
               <p className="text-xs text-brand-600">آزاد شده</p>
-              <p className="text-base font-bold text-brand-700">{formatBytes(stats.saved_total)}</p>
+              <p className="op-numeric text-xl font-extrabold text-brand-700">{formatBytes(stats.saved_total)}</p>
             </div>
             <div className="rounded-xl bg-ink-50 px-3 py-2">
               <p className="text-xs text-ink-500">میانگین کاهش</p>
-              <p className="text-base font-bold text-ink-900">{formatPercent(stats.average_reduction)}</p>
+              <p className="op-numeric text-xl font-extrabold text-ink-900">{formatPercent(stats.average_reduction)}</p>
             </div>
           </div>
         </CardBody>
       </Card>
 
-      <Card>
+      <Card className="op-anim">
         <CardBody className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <button

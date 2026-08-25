@@ -3,7 +3,6 @@ import {
   Images,
   CheckCircle2,
   Clock,
-  TrendingDown,
   Percent,
 } from 'lucide-react';
 import { StatCard } from '../../components/ui/StatCard';
@@ -48,12 +47,6 @@ export function StatsCards() {
         )}
         icon={Clock}
         tone="brand"
-      />
-      <StatCard
-        label="میانگین کاهش حجم"
-        value={formatPercent(data.average_reduction)}
-        icon={TrendingDown}
-        tone="amber"
       />
     </div>
   );
