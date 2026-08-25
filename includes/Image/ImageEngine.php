@@ -126,7 +126,7 @@ class ImageEngine {
 				return $result;
 			}
 			$final_path = $converted;
-			$this->sync_attachment( $attachment_id, $source_path, $converted, $target_mime );
+			$this->sync_attachment( $attachment_id, $source_path, $converted, $target_mime, $options );
 		} else {
 			// In-place same-format optimization.
 			if ( ! @rename( $temp_path, $source_path ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors
@@ -360,13 +360,19 @@ class ImageEngine {
 	/**
 	 * Keep WordPress attachment metadata consistent after a format change.
 	 *
+	 * Converts the main file AND every generated sub-size (thumbnail, medium,
+	 * large, shop sizes, etc.) to the target format. Without this, the images
+	 * actually rendered on the site stay unoptimized even though the full
+	 * original was converted.
+	 *
 	 * @param int    $attachment_id Attachment ID.
 	 * @param string $old_path      Original path.
 	 * @param string $new_path      Converted path.
 	 * @param string $target_mime   New mime.
+	 * @param array  $options       Optimization options (quality, sizing, etc.).
 	 * @return void
 	 */
-	private function sync_attachment( $attachment_id, $old_path, $new_path, $target_mime ) {
+	private function sync_attachment( $attachment_id, $old_path, $new_path, $target_mime, $options = array() ) {
 		if ( ! $attachment_id ) {
 			return;
 		}
@@ -381,10 +387,48 @@ class ImageEngine {
 			)
 		);
 
-		// Regenerate metadata only when the main format actually changed.
-		if ( function_exists( 'wp_generate_attachment_metadata' ) ) {
-			$meta = wp_generate_attachment_metadata( $attachment_id, $new_path );
-			wp_update_attachment_metadata( $attachment_id, $meta );
+		if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
+			return;
 		}
+
+		// Regenerate metadata (and sub-sizes) from the optimized main file.
+		$meta = wp_generate_attachment_metadata( $attachment_id, $new_path );
+		if ( empty( $meta ) || ! is_array( $meta ) ) {
+			return;
+		}
+
+		// Point the main file record at the converted file.
+		$meta['file'] = $relative;
+
+		// Optimize every generated sub-size too.
+		if ( ! empty( $meta['sizes'] ) && is_array( $meta['sizes'] ) ) {
+			$uploads_base = wp_upload_dir()['basedir'];
+			$dir          = dirname( $meta['file'] );
+			foreach ( $meta['sizes'] as $size => $data ) {
+				if ( empty( $data['file'] ) ) {
+					continue;
+				}
+				$abs = wp_normalize_path( $uploads_base . '/' . $dir . '/' . $data['file'] );
+				if ( ! file_exists( $abs ) ) {
+					continue;
+				}
+				$size_mime = wp_get_image_mime( $abs );
+				// Only convert raster formats into the (different) target format.
+				if ( ! $size_mime || $size_mime === $target_mime || ! preg_match( '#^image/(jpeg|png|gif)$#', $size_mime ) ) {
+					continue;
+				}
+				$converted = $this->converted_path( $abs, $target_mime );
+				$ok        = $this->checker->imagick_available()
+					? $this->process_imagick( $abs, $converted, $options, $target_mime )
+					: $this->process_gd( $abs, $converted, $options, $target_mime );
+				if ( $ok && file_exists( $converted ) ) {
+					@unlink( $abs ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+					$meta['sizes'][ $size ]['file']      = basename( $converted );
+					$meta['sizes'][ $size ]['mime-type'] = $target_mime;
+				}
+			}
+		}
+
+		wp_update_attachment_metadata( $attachment_id, $meta );
 	}
 }
