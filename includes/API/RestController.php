@@ -16,6 +16,7 @@ use OptiPress\Scanner\Scanner;
 use OptiPress\Optimizer\Processor;
 use OptiPress\Backup\BackupManager;
 use OptiPress\Stats\Statistics;
+use OptiPress\Logging\Logger;
 use WP_REST_Server;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -233,6 +234,30 @@ class RestController {
 				'args'                => array(
 					'id' => array( 'type' => 'integer', 'sanitize_callback' => 'absint', 'required' => true ),
 				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/logs',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'get_logs' ),
+				'permission_callback' => array( $this, 'admin_permission' ),
+				'args'                => array(
+					'level' => array( 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ),
+					'limit' => array( 'type' => 'integer', 'sanitize_callback' => 'absint' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/logs/clear',
+			array(
+				'methods'             => WP_REST_Server::EDITABLE,
+				'callback'            => array( $this, 'clear_logs' ),
+				'permission_callback' => array( $this, 'admin_permission' ),
 			)
 		);
 	}
@@ -538,5 +563,47 @@ class RestController {
 			'backup_enabled'  => array( 'type' => 'boolean' ),
 			'convert_to'      => array( 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ),
 		);
+	}
+
+	/**
+	 * GET /logs — recent activity log entries (kept in Persian).
+	 *
+	 * @param \WP_REST_Request $request Request.
+	 * @return \WP_REST_Response
+	 */
+	public function get_logs( $request ) {
+		$level = (string) $request->get_param( 'level' );
+		$limit = (int) $request->get_param( 'limit' );
+		if ( $limit <= 0 || $limit > 500 ) {
+			$limit = 200;
+		}
+
+		$logs = Logger::instance()->get_logs( 0 );
+		if ( $level ) {
+			$logs = array_filter(
+				$logs,
+				function ( $entry ) use ( $level ) {
+					return isset( $entry['level'] ) && $entry['level'] === $level;
+				}
+			);
+		}
+		$logs = array_slice( array_values( $logs ), 0, $limit );
+
+		return rest_ensure_response(
+			array(
+				'logs'  => $logs,
+				'count' => count( $logs ),
+			)
+		);
+	}
+
+	/**
+	 * POST /logs/clear — wipe the activity log.
+	 *
+	 * @return \WP_REST_Response
+	 */
+	public function clear_logs() {
+		Logger::instance()->clear();
+		return rest_ensure_response( array( 'success' => true ) );
 	}
 }

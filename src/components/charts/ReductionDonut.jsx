@@ -24,7 +24,7 @@ function Donut({ value, color }) {
           />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold text-ink-900">{formatPercent(v / 100)}</span>
+        <span className="text-2xl font-bold text-ink-900">{formatPercent(v)}</span>
         <span className="text-[10px] text-ink-400">کاهش</span>
       </div>
     </div>

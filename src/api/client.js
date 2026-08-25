@@ -70,4 +70,13 @@ export const api = {
   // Statistics & reports
   getStatistics: () => request('/statistics'),
   getReports: () => request('/reports'),
+
+  // Logs
+  getLogs: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== '' && v !== null && v !== undefined)
+    ).toString();
+    return request(`/logs${qs ? `?${qs}` : ''}`);
+  },
+  clearLogs: () => request('/logs/clear', { method: 'POST' }),
 };

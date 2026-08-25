@@ -60,6 +60,7 @@ class AdminPage {
 			'optipress-queue'       => __( 'صف بهینه‌سازی', 'optipress' ),
 			'optipress-reports'     => __( 'گزارش‌ها', 'optipress' ),
 			'optipress-woocommerce' => __( 'ووکامرس', 'optipress' ),
+			'optipress-logs'        => __( 'لاگ', 'optipress' ),
 			'optipress-settings'    => __( 'تنظیمات', 'optipress' ),
 		);
 		foreach ( $submenus as $slug => $label ) {
@@ -172,6 +173,7 @@ class AdminPage {
 			'optipress-queue'       => 'queue',
 			'optipress-reports'     => 'reports',
 			'optipress-woocommerce' => 'woocommerce',
+			'optipress-logs'        => 'logs',
 			'optipress-settings'    => 'settings',
 		);
 		$active_tab = isset( $tab_map[ $page ] ) ? $tab_map[ $page ] : 'dashboard';

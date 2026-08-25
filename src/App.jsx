@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { LayoutDashboard, ScanLine, ListChecks, BarChart3, Package, Settings2 } from 'lucide-react';
+import { LayoutDashboard, ScanLine, ListChecks, BarChart3, Package, Settings2, ScrollText } from 'lucide-react';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { ScannerPage } from './features/scanner/ScannerPage';
 import { QueuePage } from './features/queue/QueuePage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { WooCommercePage } from './features/woocommerce/WooCommercePage';
+import { LogsPage } from './features/logs/LogsPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { api } from './api/client';
 
@@ -14,6 +15,7 @@ const NAV = [
   { id: 'queue', label: 'صف بهینه‌سازی', icon: ListChecks, page: 'optipress-queue' },
   { id: 'reports', label: 'گزارش‌ها', icon: BarChart3, page: 'optipress-reports' },
   { id: 'woocommerce', label: 'ووکامرس', icon: Package, page: 'optipress-woocommerce' },
+  { id: 'logs', label: 'لاگ', icon: ScrollText, page: 'optipress-logs' },
   { id: 'settings', label: 'تنظیمات', icon: Settings2, page: 'optipress-settings' },
 ];
 
@@ -88,6 +90,7 @@ export default function App() {
           {active === 'queue' && <QueuePage />}
           {active === 'reports' && <ReportsPage />}
           {active === 'woocommerce' && <WooCommercePage />}
+          {active === 'logs' && <LogsPage />}
           {active === 'settings' && <SettingsPage />}
         </div>
       </main>
