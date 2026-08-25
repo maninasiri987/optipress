@@ -93,6 +93,10 @@ class Settings {
 		$clean['debug_logging']     = ! empty( $input['debug_logging'] );
 		$clean['wc_product_images'] = ! empty( $input['wc_product_images'] );
 
+		$clean['theme'] = in_array( $input['theme'] ?? '', array( 'light', 'dark' ), true )
+			? $input['theme']
+			: ( $current['theme'] ?? 'light' );
+
 		return $clean;
 	}
 

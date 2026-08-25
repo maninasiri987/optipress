@@ -57,9 +57,10 @@ class Activator {
 				'batch_size'        => 20,
 				'max_attempts'      => 3,
 				'process_timeout'   => 120, // seconds before a "processing" item is considered stale.
-				'debug_logging'     => false,
-				'wc_product_images' => true,
-			);
+			'debug_logging'     => false,
+			'wc_product_images' => true,
+			'theme'             => 'light', // light | dark.
+		);
 			add_option( 'optipress_settings', $defaults );
 		}
 

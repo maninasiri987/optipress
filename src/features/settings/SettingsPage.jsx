@@ -24,6 +24,7 @@ const EMPTY = {
   schedule_start: '01:00',
   schedule_end: '05:00',
   schedule_days: ['sat', 'sun', 'mon', 'tue', 'wed', 'thu', 'fri'],
+  theme: 'light',
 };
 
 function Section({ title, children }) {
@@ -76,6 +77,7 @@ export function SettingsPage() {
       await api.updateSettings(form);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
+      window.dispatchEvent(new CustomEvent('optipress:theme', { detail: form.theme }));
       refresh();
     } catch (e) {
       setError(e.message);
@@ -213,6 +215,19 @@ export function SettingsPage() {
                   );
                 })}
               </div>
+            </Field>
+          </Section>
+
+          <Section title="ظاهر">
+            <Field label="تم رابط کاربری" hint="تم تیره برای کار در محیط‌های کم‌نور مناسب است.">
+              <select
+                value={form.theme}
+                onChange={(e) => update('theme', e.target.value)}
+                className="w-full rounded-xl border border-ink-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+              >
+                <option value="light">روشن</option>
+                <option value="dark">تیره</option>
+              </select>
             </Field>
           </Section>
 

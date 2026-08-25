@@ -48,7 +48,7 @@ class AdminPage {
 			'manage_options',
 			'optipress',
 			array( $this, 'render_page' ),
-			'dashicons-images-alt2',
+			OPTIPRESS_URL . 'assets/icon.png',
 			58
 		);
 	}
@@ -118,8 +118,9 @@ class AdminPage {
 				'apiUrl'      => esc_url_raw( rest_url( 'optipress/v1' ) ),
 				'nonce'       => wp_create_nonce( 'wp_rest' ),
 				'adminUrl'    => admin_url(),
-				'pluginUrl'   => OPTIPRESS_URL,
-				'assetsUrl'   => OPTIPRESS_URL . 'assets/dist/',
+			'pluginUrl'   => OPTIPRESS_URL,
+			'assetsUrl'   => OPTIPRESS_URL . 'assets/dist/',
+			'iconUrl'     => OPTIPRESS_URL . 'assets/icon.png',
 				'textDomain'  => 'optipress',
 				'isRtl'       => is_rtl(),
 				'woocommerce' => optipress_is_woocommerce_active(),
