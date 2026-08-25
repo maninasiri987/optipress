@@ -237,7 +237,7 @@ export function SettingsPage() {
 
       {/* Floating save button: appears only when there are unsaved changes. */}
       <div
-        className={`fixed bottom-5 right-5 z-[10000] transition-all duration-300 ease-out ${
+        className={`fixed bottom-5 left-5 z-[10000] transition-all duration-300 ease-out ${
           visible
             ? 'translate-y-0 opacity-100'
             : 'pointer-events-none translate-y-[160%] opacity-0'
