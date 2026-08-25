@@ -1,36 +1,71 @@
-OptiPress — WordPress Test Site Credentials & Locations
-=========================================================
+==================================================
+OptiPress — Test Site Credentials & Locations
+==================================================
 
-ADMIN ACCESS
-------------
-WordPress URL : http://localhost:8080
-Admin URL     : http://localhost:8080/wp-admin
-Username      : optipress_admin
-Password      : OptiPress@123
-Admin email   : admin@optipress.test
+ENVIRONMENT NOTE
+----------------
+The previous test site lived in /tmp and was wiped when the
+session ended. It has been rebuilt in a PERSISTENT location
+(see below) so it survives restarts.
 
-WORDPRESS INSTALLATION
-----------------------
-Site root (document root) : /tmp/wordpress
-Config file               : /tmp/wordpress/wp-config.php
-Database                  : MariaDB on 127.0.0.1:3307  (db: wpopti, user: wpuser, pass: wppass123)
-Web server                : PHP built-in server (php -S 0.0.0.0:8080), PID running in session
+WORDPRESS ADMIN LOGIN
+---------------------
+URL:        http://localhost:8080/wp-admin
+Username:   optipress_admin
+Password:   OptiPress@123
+Email:      admin@optipress.test
+Site URL:   http://localhost:8080
 
-TEMPLATE / THEME LOCATION
--------------------------
-Themes directory : /tmp/wordpress/wp-content/themes
-Active theme     : twentytwentyfive
-Active theme dir : /tmp/wordpress/wp-content/themes/twentytwentyfive
+DATABASE (system MariaDB, persistent)
+-------------------------------------
+DB name:    optipress_test
+DB user:    optipress_user
+DB pass:    optipress_pass
+DB host:    127.0.0.1:3306
 
-PLUGIN LOCATION (OptiPress)
-----------------------------
-Plugin dir : /tmp/wordpress/wp-content/plugins/optipress
-Source repo (this folder) : /home/mani/Desktop/projects/optipress
+WORDPRESS INSTALL LOCATION (docroot)
+------------------------------------
+/home/mani/optipress-test
 
-NOTES
+PLUGINS
+-------
+WooCommerce: activated (system install)
+OptiPress:  /home/mani/optipress-test/wp-content/plugins/optipress
+OptiPress dev/source: /home/mani/Desktop/projects/optipress
+
+OPTPRESS SETTINGS
+-----------------
+automation_mode = manual   (images are NOT auto-optimized on upload;
+                             they are queued and optimized from the UI)
+
+DEMO DATA
+---------
+15 unoptimized sample JPEGs + 15 WooCommerce products are pre-loaded.
+Image generator: /home/mani/gen_demo.php
+Demo seeder:      /home/mani/seed_demo.php   (run: wp eval "require '/home/mani/seed_demo.php';")
+Demo images dir:  /home/mani/demoimg
+
+TOOLS
 -----
-- The browser tab favicon and WP menu icon both use the dashicons-images-alt2
-  glyph; the OptiPress app applies a dark theme (toggled in Settings) that also
-  darkens the WordPress admin chrome on OptiPress pages.
-- Images imported for testing are large JPEGs (non-WebP) so they appear as
-  "not optimized" and can be optimized via OptiPress (converts to WebP).
+wp-cli phar: /home/mani/wp.phar
+Run from:    cd /home/mani/optipress-test
+Examples:
+  php /home/mani/wp.phar plugin list --status=active
+  php /home/mani/wp.phar eval 'optipress_update_option("automation_mode","manual");'
+
+WEB SERVER
+----------
+Command:  php -S 0.0.0.0:8080   (run from /home/mani/optipress-test)
+Log:      /home/mani/wp-server.log
+Restart:  pkill -f "php -S 0.0.0.0:8080" ; cd /home/mani/optipress-test ;
+          ( setsid php -S 0.0.0.0:8080 >/home/mani/wp-server.log 2>&1 </dev/null & )
+
+HOW TO TEST OPTIMIZATION
+------------------------
+1. Open http://localhost:8080/wp-admin → OptiPress (منوی OptiPress).
+2. Scanner tab → "شروع اسکن" (scan). 15 images enqueue, 0 rejected.
+3. Queue tab → "شروع" (start) to optimize. Images convert to WebP.
+4. Dashboard shows average reduction (~90%) via the donut chart.
+5. Reports tab shows per-format savings.
+
+==================================================
