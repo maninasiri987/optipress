@@ -34,6 +34,7 @@ class AdminPage {
 	public function register() {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+		add_action( 'admin_head', array( $this, 'output_favicon' ) );
 	}
 
 	/**
@@ -60,6 +61,20 @@ class AdminPage {
 	 */
 	public function render_page() {
 		echo '<div id="optipress-root" class="optipress-admin-wrap"></div>';
+	}
+
+	/**
+	 * Output a browser-tab favicon on the OptiPress admin page.
+	 *
+	 * @return void
+	 */
+	public function output_favicon() {
+		$screen = get_current_screen();
+		if ( ! $screen || $screen->id !== $this->hook ) {
+			return;
+		}
+		$url = OPTIPRESS_URL . 'assets/icon.png';
+		echo '<link rel="icon" type="image/png" href="' . esc_url( $url ) . '">';
 	}
 
 	/**
