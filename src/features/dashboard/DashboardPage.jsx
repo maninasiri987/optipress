@@ -126,31 +126,6 @@ export function DashboardPage() {
       <AutomationStatus />
 
       <CompatibilityPanel />
-
-      <Card>
-        <CardBody>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-ink-800">
-                همین حالا کتابخانه را بهینه کنید
-              </p>
-              <p className="mt-1 text-xs text-ink-500">
-                اسکن، برآورد و بهینه‌سازی گروهی در پس‌زمینه و بدون نیاز به باز بودن
-                مرورگر.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={startNow}
-              disabled={busy}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
-            >
-              {busy ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
-              {busy ? 'در حال آغاز…' : 'شروع بهینه‌سازی'}
-            </button>
-          </div>
-        </CardBody>
-      </Card>
     </div>
   );
 }

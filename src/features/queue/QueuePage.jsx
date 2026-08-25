@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Play,
   Pause,
@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
-import { useApi } from '../../hooks/useApi';
 import { api } from '../../api/client';
 import { formatNumber, formatBytes, formatPercent } from '../../lib/format';
 
@@ -60,7 +59,22 @@ export function QueuePage() {
   const [busy, setBusy] = useState(false);
   const [restoring, setRestoring] = useState(null);
   const [toast, setToast] = useState(null);
-  const { data, loading, refresh } = useApi(() => api.getQueue({ status: filter, limit: 50 }));
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const dataRef = useRef(null);
+  const drivingRef = useRef(false);
+
+  const load = useCallback(async () => {
+    try {
+      const d = await api.getQueue({ status: filter, limit: 50 });
+      setData(d);
+    } finally {
+      setLoading(false);
+    }
+  }, [filter]);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => { dataRef.current = data; }, [data]);
 
   const flash = (msg, tone = 'green') => {
     setToast({ msg, tone });
@@ -90,7 +104,7 @@ export function QueuePage() {
       flash(e.message, 'rose');
     } finally {
       setBusy(false);
-      refresh();
+      load();
     }
   };
 
@@ -111,17 +125,41 @@ export function QueuePage() {
   const total = Number(stats.total) || 0;
   const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  // Keep the control status and progress in sync while the queue is active,
-  // so the Start/Pause button automatically reverts to "شروع" when done.
+  // While the queue is "running", keep processing one batch at a time until it
+  // empties. The backend auto-stops when nothing is left, so the Start/Pause
+  // button automatically reverts to "شروع" when the work is done.
   useEffect(() => {
-    if (!data) return;
-    const active =
-      data.control?.status === 'running' ||
-      (Number(stats.pending) || 0) + (Number(stats.processing) || 0) > 0;
-    if (!active) return;
-    const id = setInterval(() => refresh(), 2500);
-    return () => clearInterval(id);
-  }, [data, refresh, stats.pending, stats.processing]);
+    if (!data || data.control?.status !== 'running' || drivingRef.current) return;
+    drivingRef.current = true;
+    let iterations = 0;
+    const loop = async () => {
+      if (!drivingRef.current || iterations >= 200) {
+        drivingRef.current = false;
+        try { await load(); } catch (e) {}
+        return;
+      }
+      iterations += 1;
+      const cur = dataRef.current;
+      const st = cur?.control?.status;
+      const pending = Number(cur?.stats?.pending) || 0;
+      const processing = Number(cur?.stats?.processing) || 0;
+      if (st !== 'running' || pending + processing === 0) {
+        drivingRef.current = false;
+        try { await load(); } catch (e) {}
+        return;
+      }
+      try {
+        const d = await api.queueProcess();
+        setData(d);
+      } catch (e) {
+        drivingRef.current = false;
+        return;
+      }
+      setTimeout(loop, 1200);
+    };
+    loop();
+    return () => { drivingRef.current = false; };
+  }, [data?.control?.status, filter, load]);
 
   return (
     <div className="space-y-6">

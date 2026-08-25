@@ -403,6 +403,7 @@ class RestController {
 		$queue = new QueueManager();
 		$queue->set_control( 'running' );
 		$summary = ( new Processor() )->process_batch();
+		$this->maybe_stop( $queue );
 		return rest_ensure_response(
 			array( 'control' => $queue->get_control(), 'summary' => $summary, 'stats' => $queue->get_stats() )
 		);
@@ -413,6 +414,12 @@ class RestController {
 	 *
 	 * @return \WP_REST_Response
 	 */
+	private function maybe_stop( $queue ) {
+		if ( (int) $queue->count_by_status( 'pending' ) === 0 && (int) $queue->count_by_status( 'processing' ) === 0 ) {
+			$queue->set_control( 'stopped' );
+		}
+	}
+
 	public function queue_pause() {
 		$queue = new QueueManager();
 		$queue->set_control( 'paused' );
@@ -427,7 +434,11 @@ class RestController {
 	public function queue_resume() {
 		$queue = new QueueManager();
 		$queue->set_control( 'running' );
-		return rest_ensure_response( array( 'control' => $queue->get_control() ) );
+		$summary = ( new Processor() )->process_batch();
+		$this->maybe_stop( $queue );
+		return rest_ensure_response(
+			array( 'control' => $queue->get_control(), 'summary' => $summary, 'stats' => $queue->get_stats() )
+		);
 	}
 
 	/**
@@ -450,8 +461,10 @@ class RestController {
 		$queue = new QueueManager();
 		$reset = $queue->retry_failed();
 		$queue->set_control( 'running' );
+		$summary = ( new Processor() )->process_batch();
+		$this->maybe_stop( $queue );
 		return rest_ensure_response(
-			array( 'reset' => $reset, 'control' => $queue->get_control() )
+			array( 'reset' => $reset, 'control' => $queue->get_control(), 'summary' => $summary, 'stats' => $queue->get_stats() )
 		);
 	}
 
@@ -461,8 +474,10 @@ class RestController {
 	 * @return \WP_REST_Response
 	 */
 	public function queue_process() {
-		$queue   = new QueueManager();
+		$queue = new QueueManager();
+		$queue->set_control( 'running' );
 		$summary = ( new Processor() )->process_batch();
+		$this->maybe_stop( $queue );
 		return rest_ensure_response(
 			array( 'summary' => $summary, 'stats' => $queue->get_stats(), 'control' => $queue->get_control() )
 		);
