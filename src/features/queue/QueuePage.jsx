@@ -140,42 +140,47 @@ export function QueuePage() {
   const total = Number(stats.total) || 0;
   const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  // While the queue is "running", keep processing one batch at a time until it
-  // empties. The backend auto-stops when nothing is left, so the Start/Pause
-  // button automatically reverts to "شروع" when the work is done.
+  // While the queue is "running": a fast poller keeps the UI mirrored to the
+  // server's true state (whatever drives the progress), and a resilient
+  // driver keeps claiming small batches until the queue empties.
+  const running = data?.control?.status === 'running';
+
   useEffect(() => {
-    if (!data || data.control?.status !== 'running' || drivingRef.current) return;
+    if (!running) return;
+    const t = setInterval(() => {
+      load().catch(() => {});
+    }, 1200);
+    return () => clearInterval(t);
+  }, [running, load]);
+
+  useEffect(() => {
+    if (!data || !running || drivingRef.current) return;
     drivingRef.current = true;
-    let iterations = 0;
+    let ticks = 0;
     const loop = async () => {
-      if (!drivingRef.current || iterations >= 200) {
-        drivingRef.current = false;
-        try { await load(); } catch (e) {}
-        return;
-      }
-      iterations += 1;
+      ticks += 1;
       const cur = dataRef.current;
       const st = cur?.control?.status;
       const pending = Number(cur?.stats?.pending) || 0;
       const processing = Number(cur?.stats?.processing) || 0;
-      if (st !== 'running' || pending + processing === 0) {
+      if (st !== 'running' || pending + processing === 0 || ticks > 500) {
         drivingRef.current = false;
-        try { await load(); } catch (e) {}
+        load().catch(() => {});
         return;
       }
       try {
-        await api.queueProcess();
-        // Reload items + stats so the table/progress update live.
-        await load();
+        await api.queueProcess(LIVE_BATCH);
       } catch (e) {
-        drivingRef.current = false;
-        return;
+        // Transient failure (network hiccup, slow request): retry next tick
+        // instead of killing the loop.
       }
-      setTimeout(loop, 900);
+      setTimeout(loop, 400);
     };
     loop();
-    return () => { drivingRef.current = false; };
-  }, [data?.control?.status, filter, load]);
+    return () => {
+      drivingRef.current = false;
+    };
+  }, [running, filter, load]);
 
   return (
     <div className="space-y-6">
@@ -202,6 +207,12 @@ export function QueuePage() {
         <CardBody className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <ControlBar control={data?.control?.status} busy={busy} onAction={handleAction} />
+            {running && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-600">
+                <Loader2 size={14} className="animate-spin" />
+                بهینه‌سازی زنده… {formatNumber(completed)} از {formatNumber(total)}
+              </span>
+            )}
           </div>
           <div className="op-progress h-2 w-full overflow-hidden rounded-full bg-ink-100">
             <div className="h-full bg-brand-500" style={{ width: `${progress}%` }} />
