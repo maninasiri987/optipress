@@ -6,44 +6,43 @@ Tested up to: 6.6
 Requires PHP: 7.4
 Stable tag: 1.0.0
 License: proprietary
-License URI: https://optipress.ir
 Text Domain: optipress
 
-== توضیحات ==
+== Description ==
 
-**OptiPress** افزونه‌ای حرفه‌ای، کاملاً فارسی و راست‌چین برای بهینه‌سازی تصاویر وردپرس و ووکامرس است. تمام پردازش‌ها به‌صورت **محلی روی هاست خودتان** انجام می‌شود و هیچ تصویری به سرور خارجی ارسال نمی‌گردد.
+**OptiPress** is a professional, fully localized Persian and right-to-left (RTL) plugin for optimizing WordPress and WooCommerce images. All processing runs **locally on your own hosting** — no image is ever sent to an external server.
 
-ویژگی‌های اصلی:
+Key features:
 
-* بهینه‌سازی دسته‌ای و محدود به زمان‌بندی (مناسب هاست‌های اشتراکی)
-* پشتیبان‌گیری خودکار از نسخه اصلی پیش از جایگزینی و امکان بازیابی یک‌کلیک
-* تبدیل به فرمت‌های مدرن WebP / AVIF با حفظ کیفیت
-* پشتیبانی کامل از ووکامرس (تصاویر شاخص و گالری محصولات)
-* ستون و فیلتر «بهینه‌شده / بهینه‌نشده / ناموفق» در کتابخانه رسانه
-* نمایش وضعیت بهینه‌سازی و بازیابی در پنجره جزئیات رسانه
-* استفاده از Imagick با بازگشت به GD در صورت عدم دسترسی
-* بدون نیاز به دیمون یا افزونه‌های جانبی — اجرا از طریق WP-Cron
+* Batch optimization with scheduling limits (safe for shared hosting)
+* Automatic backup of every original file before replacement, with one-click restore
+* Conversion to modern WebP / AVIF formats while preserving quality
+* Full WooCommerce support (product featured images and galleries)
+* "Optimized / Unoptimized / Failed" column and filters in the Media Library
+* Optimization status and restore actions inside the media details modal
+* Uses Imagick with automatic fallback to GD when unavailable
+* No daemon or third-party service required — runs through WP-Cron
 
-این نسخه، نسخه پولی و کامل OptiPress است.
+This is the full, paid version of OptiPress.
 
-== نصب ==
+== Installation ==
 
-1. پوشه افزونه را در مسیر `/wp-content/plugins/optipress` آپلود کنید.
-2. از بخش «افزونه‌ها» افزونه را فعال کنید.
-3. از منوی «OptiPress» برای اسکن، زمان‌بندی و پایش بهینه‌سازی استفاده کنید.
+1. Upload the plugin folder to `/wp-content/plugins/optipress`.
+2. Activate the plugin from the "Plugins" screen.
+3. Use the "OptiPress" menu to scan, schedule, and monitor optimization.
 
-== سوالات متداول ==
+== Frequently Asked Questions ==
 
-= آیا تصاویر من به سرور دیگری ارسال می‌شوند؟ =
-خیر. تمام پردازش‌ها روی هاست شما انجام می‌شود.
+= Are my images sent to another server? =
+No. All processing happens on your own hosting.
 
-= آیا افزونه روی هاست اشتراکی کار می‌کند؟ =
-بله. OptiPress از دسته‌های کوچک و قابل ازسرگیری از طریق WP-Cron استفاده می‌کند.
+= Does it work on shared hosting? =
+Yes. OptiPress uses small, resumable batches driven by WP-Cron.
 
-= چگونه نسخه اصلی تصویر را بازیابی کنم؟ =
-از دکمه بازیابی در صف بهینه‌سازی، کتابخانه رسانه یا پنجره جزئیات استفاده کنید.
+= How do I restore the original version of an image? =
+Use the restore button in the optimization queue, the Media Library, or the attachment details modal.
 
-== تغییرات ==
+== Changelog ==
 
 = 1.0.0 =
-* انتشار نخستین نسخه پولی OptiPress.
+* Initial release of the paid OptiPress plugin.
