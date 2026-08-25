@@ -327,6 +327,8 @@ class RestController {
 	 */
 	public function get_settings( $request = null ) {
 		$settings = get_option( 'optipress_settings', array() );
+		$next     = wp_next_scheduled( 'optipress_process_queue' );
+		$settings['next_run'] = $next ? (int) $next : 0;
 		return rest_ensure_response( $settings );
 	}
 

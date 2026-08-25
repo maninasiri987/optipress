@@ -7,6 +7,7 @@ import { api } from '../../api/client';
 import { useApi } from '../../hooks/useApi';
 import { Badge } from '../../components/ui/Badge';
 import { Card, CardBody } from '../../components/ui/Card';
+import { formatNumber } from '../../lib/format';
 
 const MODE_LABELS = {
   automatic: { label: 'خودکار', tone: 'info' },
@@ -15,19 +16,43 @@ const MODE_LABELS = {
 };
 
 function AutomationStatus() {
-  const { data } = useApi(api.getSettings);
-  const mode = data?.automation_mode || 'automatic';
+  const settings = useApi(api.getSettings);
+  const stats = useApi(api.getStats);
+  const loading = settings.loading || stats.loading;
+  const mode = settings.data?.automation_mode || 'automatic';
   const meta = MODE_LABELS[mode] || MODE_LABELS.automatic;
+
+  let detail = 'در حال بارگذاری وضعیت…';
+  if (!loading) {
+    if (mode === 'manual') {
+      const waiting =
+        (Number(stats.data?.pending) || 0) + (Number(stats.data?.processing) || 0);
+      detail =
+        waiting > 0
+          ? `${formatNumber(waiting)} تصویر در انتظار بهینه‌سازی است.`
+          : 'تصویری در انتظار بهینه‌سازی نیست.';
+    } else if (mode === 'immediate') {
+      detail = 'تصاویر بلافاصله پس از بارگذاری، به‌صورت خودکار بهینه می‌شوند.';
+    } else {
+      const next = settings.data?.next_run ? Number(settings.data.next_run) : 0;
+      if (next) {
+        const when = new Date(next * 1000).toLocaleTimeString('fa-IR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        detail = `بهینه‌سازی خودکار طبق زمان‌بندی در ساعت ${when} آغاز می‌شود.`;
+      } else {
+        detail = 'بهینه‌سازی خودکار طبق زمان‌بندی تنظیم‌شده اجرا می‌شود.';
+      }
+    }
+  }
 
   return (
     <Card>
       <CardBody className="flex items-center justify-between gap-4">
         <div>
           <p className="text-xs text-ink-500">حالت بهینه‌سازی</p>
-          <p className="mt-1 text-sm font-semibold text-ink-800">
-            تصاویر جدید به‌صورت خودکار شناسایی می‌شوند و در زمان‌بندی تعیین‌شده بهینه
-            خواهند شد.
-          </p>
+          <p className="mt-1 text-sm font-semibold text-ink-800">{detail}</p>
         </div>
         <Badge tone={meta.tone}>{meta.label}</Badge>
       </CardBody>

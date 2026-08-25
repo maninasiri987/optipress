@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Settings2, Loader2, CheckCircle2, Info } from 'lucide-react';
+import { Settings2, Loader2, CheckCircle2 } from 'lucide-react';
 import { Card, CardBody } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import { useApi } from '../../hooks/useApi';
 import { api } from '../../api/client';
 
@@ -49,12 +48,16 @@ function Field({ label, hint, children }) {
 export function SettingsPage() {
   const { data, loading, refresh } = useApi(api.getSettings);
   const [form, setForm] = useState(EMPTY);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [initial, setInitial] = useState(EMPTY);
+  const [status, setStatus] = useState('idle'); // idle | saving | success | error
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (data) setForm({ ...EMPTY, ...data });
+    if (data) {
+      const merged = { ...EMPTY, ...data };
+      setForm(merged);
+      setInitial(merged);
+    }
   }, [data]);
 
   const update = (key, value) => setForm((f) => ({ ...f, [key]: value }));
@@ -69,22 +72,26 @@ export function SettingsPage() {
     });
   };
 
+  const dirty = JSON.stringify(form) !== JSON.stringify(initial);
+
   const save = async () => {
-    setSaving(true);
+    if (status === 'saving' || status === 'success') return;
+    setStatus('saving');
     setError(null);
-    setSaved(false);
     try {
       await api.updateSettings(form);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      setInitial(form);
+      setStatus('success');
       window.dispatchEvent(new CustomEvent('optipress:theme', { detail: form.theme }));
       refresh();
+      setTimeout(() => setStatus('idle'), 2200);
     } catch (e) {
       setError(e.message);
-    } finally {
-      setSaving(false);
+      setStatus('idle');
     }
   };
+
+  const visible = dirty || status === 'saving' || status === 'success';
 
   if (loading && !data) {
     return (
@@ -104,11 +111,6 @@ export function SettingsPage() {
         </p>
       </div>
 
-      {saved && (
-        <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          <CheckCircle2 size={16} /> تنظیمات ذخیره شد.
-        </div>
-      )}
       {error && (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
@@ -230,20 +232,39 @@ export function SettingsPage() {
               </select>
             </Field>
           </Section>
-
-          <div className="flex items-center gap-3 pt-2">
-            <button
-              type="button"
-              disabled={saving}
-              onClick={save}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
-            >
-              {saving ? <Loader2 size={16} className="animate-spin" /> : <Settings2 size={16} />}
-              {saving ? 'در حال ذخیره…' : 'ذخیره تنظیمات'}
-            </button>
-          </div>
         </CardBody>
       </Card>
+
+      {/* Floating save button: appears only when there are unsaved changes. */}
+      <div
+        className={`fixed bottom-5 right-5 z-50 transition-all duration-300 ease-out ${
+          visible
+            ? 'translate-y-0 opacity-100'
+            : 'pointer-events-none translate-y-[160%] opacity-0'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={save}
+          disabled={status === 'saving' || status === 'success'}
+          className={`inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-lg transition ${
+            status === 'success'
+              ? 'bg-green-600'
+              : status === 'error'
+                ? 'bg-rose-600'
+                : 'bg-brand-600 hover:bg-brand-700'
+          } disabled:cursor-default disabled:opacity-90`}
+        >
+          {status === 'saving' && <Loader2 size={18} className="animate-spin" />}
+          {status === 'success' && <CheckCircle2 size={18} />}
+          {status === 'idle' && <Settings2 size={18} />}
+          {status === 'saving'
+            ? 'در حال ذخیره…'
+            : status === 'success'
+              ? 'ذخیره شد'
+              : 'ذخیره تغییرات'}
+        </button>
+      </div>
     </div>
   );
 }
