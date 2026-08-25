@@ -209,6 +209,32 @@ class RestController {
 				'permission_callback' => array( $this, 'admin_permission' ),
 			)
 		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/attachment/(?P<id>\d+)/status',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'get_attachment_status' ),
+				'permission_callback' => array( $this, 'admin_permission' ),
+				'args'                => array(
+					'id' => array( 'type' => 'integer', 'sanitize_callback' => 'absint', 'required' => true ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/attachment/(?P<id>\d+)/restore',
+			array(
+				'methods'             => WP_REST_Server::EDITABLE,
+				'callback'            => array( $this, 'restore_attachment' ),
+				'permission_callback' => array( $this, 'admin_permission' ),
+				'args'                => array(
+					'id' => array( 'type' => 'integer', 'sanitize_callback' => 'absint', 'required' => true ),
+				),
+			)
+		);
 	}
 
 	/**
@@ -449,6 +475,52 @@ class RestController {
 				'stats'     => $stats,
 				'breakdown' => $breakdown,
 				'score'     => $score['score'],
+			)
+		);
+	}
+
+	/**
+	 * GET /attachment/{id}/status — optimization state for a single attachment.
+	 *
+	 * @param \WP_REST_Request $request Request.
+	 * @return \WP_REST_Response
+	 */
+	public function get_attachment_status( $request ) {
+		$id    = (int) $request->get_param( 'id' );
+		$queue = new QueueManager();
+		$map   = $queue->get_status_map( array( $id ) );
+		$row   = $map[ $id ] ?? null;
+
+		$status = $row ? $row['status'] : 'none';
+		$saved  = $row ? (int) ( $row['saved_bytes'] ?? 0 ) : 0;
+		$src    = $row ? (int) ( $row['source_size'] ?? 0 ) : 0;
+
+		return rest_ensure_response(
+			array(
+				'attachment_id' => $id,
+				'status'        => $status,
+				'saved_bytes'   => $saved,
+				'source_size'   => $src,
+				'ratio'         => $src > 0 ? round( ( $saved / $src ) * 100 ) : 0,
+				'has_backup'    => ( new BackupManager() )->has_backup( $id ),
+			)
+		);
+	}
+
+	/**
+	 * POST /attachment/{id}/restore — restore original for a single attachment.
+	 *
+	 * @param \WP_REST_Request $request Request.
+	 * @return \WP_REST_Response
+	 */
+	public function restore_attachment( $request ) {
+		$id  = (int) $request->get_param( 'id' );
+		$ok  = ( new BackupManager() )->restore( $id );
+		return rest_ensure_response(
+			array(
+				'success' => $ok,
+				'message' => $ok ? __( 'نسخه اصلی بازیابی شد.', 'optipress' )
+								: __( 'فایل پشتیبان یافت نشد.', 'optipress' ),
 			)
 		);
 	}

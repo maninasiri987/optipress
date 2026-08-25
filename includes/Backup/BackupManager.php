@@ -121,6 +121,16 @@ class BackupManager {
 	}
 
 	/**
+	 * Whether an attachment currently has a stored backup.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return bool
+	 */
+	public function has_backup( $attachment_id ) {
+		return null !== $this->latest_backup( $attachment_id );
+	}
+
+	/**
 	 * Get the latest backup path for an attachment.
 	 *
 	 * @param int $attachment_id Attachment ID.

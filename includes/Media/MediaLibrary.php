@@ -47,6 +47,36 @@ class MediaLibrary {
         add_filter( 'handle_bulk_actions-upload', array( $this, 'handle_bulk' ), 10, 3 );
 
         add_action( 'admin_notices', array( $this, 'render_notice' ) );
+        add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+    }
+
+    /**
+     * Enqueue the media-modal enhancement script on relevant screens.
+     *
+     * @param string $hook Current admin page hook.
+     * @return void
+     */
+    public function enqueue_assets( $hook ) {
+        if ( ! in_array( $hook, array( 'upload.php', 'post.php', 'post-new.php' ), true ) ) {
+            return;
+        }
+
+        wp_enqueue_script(
+            'optipress-media-modal',
+            optipress_asset( 'js/media-modal.js' ),
+            array( 'media-views' ),
+            OPTIPRESS_VERSION,
+            true
+        );
+
+        wp_localize_script(
+            'optipress-media-modal',
+            'optipressSettings',
+            array(
+                'apiUrl' => esc_url_raw( rest_url( 'optipress/v1' ) ),
+                'nonce'  => wp_create_nonce( 'wp_rest' ),
+            )
+        );
     }
 
     /**
