@@ -46,7 +46,7 @@ function Field({ label, hint, children }) {
 }
 
 export function SettingsPage() {
-  const { data, loading, refresh } = useApi(api.getSettings);
+  const { data, loading } = useApi(api.getSettings);
   const [form, setForm] = useState(EMPTY);
   const [initial, setInitial] = useState(EMPTY);
   const [status, setStatus] = useState('idle'); // idle | saving | success | error
@@ -74,20 +74,36 @@ export function SettingsPage() {
 
   const dirty = JSON.stringify(form) !== JSON.stringify(initial);
 
+  // Clamp numeric inputs client-side to match the server's validation, so a
+  // cleared or oversized field can't silently POST nonsense.
+  const clampInt = (v, min, max, fallback) => {
+    const n = parseInt(v, 10);
+    if (Number.isNaN(n)) return fallback;
+    return Math.min(max, Math.max(min, n));
+  };
+
   const save = async () => {
     if (status === 'saving' || status === 'success') return;
     setStatus('saving');
     setError(null);
     try {
-      await api.updateSettings(form);
-      setInitial(form);
+      const payload = {
+        ...form,
+        quality: clampInt(form.quality, 10, 100, 82),
+        batch_size: clampInt(form.batch_size, 1, 200, 20),
+      };
+      const res = await api.updateSettings(payload);
+      // The sanitized response is authoritative — apply it without a refetch
+      // so any edits made during the round-trip survive untouched.
+      const merged = { ...EMPTY, ...(res?.settings || payload), next_run: form.next_run };
+      setForm(merged);
+      setInitial(merged);
       setStatus('success');
-      window.dispatchEvent(new CustomEvent('optipress:theme', { detail: form.theme }));
-      refresh();
-      setTimeout(() => setStatus('idle'), 2200);
+      window.dispatchEvent(new CustomEvent('optipress:theme', { detail: merged.theme }));
     } catch (e) {
       setError(e.message);
-      setStatus('idle');
+      setStatus('error');
+      setTimeout(() => setStatus('idle'), 3000);
     }
   };
 
@@ -152,7 +168,7 @@ export function SettingsPage() {
                   min="10"
                   max="100"
                   value={form.quality}
-                  onChange={(e) => update('quality', Number(e.target.value))}
+                  onChange={(e) => update('quality', e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full rounded-xl border border-ink-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
                 />
               </Field>
@@ -162,7 +178,7 @@ export function SettingsPage() {
                   min="1"
                   max="200"
                   value={form.batch_size}
-                  onChange={(e) => update('batch_size', Number(e.target.value))}
+                  onChange={(e) => update('batch_size', e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full rounded-xl border border-ink-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
                 />
               </Field>

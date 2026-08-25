@@ -22,21 +22,23 @@ const STATUS_META = {
 // Small batches per tick so the table/progress visibly advance item by item.
 const LIVE_BATCH = 2;
 
-function ControlBar({ control, busy, onAction }) {
+function ControlBar({ control, busy, ready, onAction }) {
   const running = control === 'running';
   const paused = control === 'paused';
 
   const primaryLabel = running ? 'مکث' : paused ? 'ادامه' : 'شروع';
   const primaryIcon = running ? <Pause size={16} /> : <Play size={16} />;
   const primaryAction = running ? 'pause' : paused ? 'resume' : 'start';
+  const startBlocked = !ready; // wait for first data load before scanning
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
-        disabled={busy}
+        disabled={busy || (primaryAction === 'start' && startBlocked)}
         onClick={() => onAction(primaryAction)}
-        className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:shadow-md disabled:opacity-60 ${
+        title={!ready ? 'در حال دریافت وضعیت صف…' : undefined}
+        className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 ${
           running
             ? 'bg-amber-500 hover:bg-amber-600'
             : 'bg-brand-600 hover:bg-brand-700'
@@ -62,38 +64,61 @@ export function QueuePage() {
   const [busy, setBusy] = useState(false);
   const [restoring, setRestoring] = useState(null);
   const [toast, setToast] = useState(null);
+  const [error, setError] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const dataRef = useRef(null);
   const drivingRef = useRef(false);
+  const seqRef = useRef(0);
+  const toastTimer = useRef(null);
 
   const load = useCallback(async () => {
+    const seq = ++seqRef.current;
     try {
       const d = await api.getQueue({ status: filter, limit: 50 });
-      setData(d);
+      // Ignore out-of-order responses from superseded requests.
+      if (seq === seqRef.current) {
+        setError(null);
+        setData(d);
+      }
+    } catch (e) {
+      if (seq === seqRef.current) setError(e.message || 'خطا در دریافت وضعیت صف.');
+      throw e;
     } finally {
-      setLoading(false);
+      if (seq === seqRef.current) setLoading(false);
     }
   }, [filter]);
 
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => { dataRef.current = data; }, [data]);
+  useEffect(() => {
+    load().catch(() => {});
+  }, [load]);
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
 
   const flash = (msg, tone = 'green') => {
+    clearTimeout(toastTimer.current);
     setToast({ msg, tone });
-    setTimeout(() => setToast(null), 3000);
+    toastTimer.current = setTimeout(() => setToast(null), 3000);
   };
+
+  const ready = !!data;
 
   const handleAction = async (action) => {
     setBusy(true);
     try {
       let res;
       if (action === 'start') {
-        // Nothing queued yet? Scan first so Start has work to do.
-        const total = Number(data?.stats?.total) || 0;
-        const pending = Number(data?.stats?.pending) || 0;
-        if (total === 0 || pending === 0) {
-          await api.scan({ scope: 'all' });
+        // Nothing queued yet? Scan first so Start has work to do. Never scan
+        // while a batch is still in flight ("pending===0" alone would lie).
+        if (ready) {
+          const total = Number(data?.stats?.total) || 0;
+          const pending = Number(data?.stats?.pending) || 0;
+          const processing = Number(data?.stats?.processing) || 0;
+          if ((total === 0 && processing === 0) || (pending === 0 && processing === 0)) {
+            await api.scan({ scope: 'all' });
+          }
         }
         res = await api.queueStart(LIVE_BATCH);
       } else if (action === 'pause') {
@@ -119,7 +144,7 @@ export function QueuePage() {
       flash(e.message, 'rose');
     } finally {
       setBusy(false);
-      load();
+      load().catch(() => {});
     }
   };
 
@@ -156,28 +181,41 @@ export function QueuePage() {
   useEffect(() => {
     if (!data || !running || drivingRef.current) return;
     drivingRef.current = true;
+    let cancelled = false;
     let ticks = 0;
+    let consecutiveFailures = 0;
     const loop = async () => {
+      if (cancelled) return; // cleanup must actually stop the chain
       ticks += 1;
       const cur = dataRef.current;
       const st = cur?.control?.status;
       const pending = Number(cur?.stats?.pending) || 0;
       const processing = Number(cur?.stats?.processing) || 0;
-      if (st !== 'running' || pending + processing === 0 || ticks > 500) {
+      if (st !== 'running' || pending + processing === 0 || ticks > 1000) {
         drivingRef.current = false;
         load().catch(() => {});
         return;
       }
       try {
         await api.queueProcess(LIVE_BATCH);
+        consecutiveFailures = 0; // success resets the budget
       } catch (e) {
-        // Transient failure (network hiccup, slow request): retry next tick
-        // instead of killing the loop.
+        // Transient failure: retry next tick, but give up after 5 in a row
+        // instead of silently spinning forever.
+        consecutiveFailures += 1;
+        if (consecutiveFailures >= 5) {
+          drivingRef.current = false;
+          flash('پردازش زنده متوقف شد؛ دوباره تلاش کنید.', 'rose');
+          load().catch(() => {});
+          return;
+        }
       }
-      setTimeout(loop, 400);
+      if (!cancelled) setTimeout(loop, 400);
+      else drivingRef.current = false;
     };
     loop();
     return () => {
+      cancelled = true;
       drivingRef.current = false;
     };
   }, [running, filter, load]);
@@ -191,8 +229,26 @@ export function QueuePage() {
         </p>
       </div>
 
+      {error && (
+        <div className="op-anim flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setLoading(true);
+              load().catch(() => {});
+            }}
+            className="rounded-lg border border-rose-300 px-3 py-1 text-xs font-semibold hover:bg-rose-100"
+          >
+            تلاش مجدد
+          </button>
+        </div>
+      )}
+
       {toast && (
         <div
+          role="status"
+          aria-live="polite"
           className={`op-toast rounded-xl border px-4 py-3 text-sm ${
             toast.tone === 'rose'
               ? 'border-rose-200 bg-rose-50 text-rose-700'
@@ -206,7 +262,7 @@ export function QueuePage() {
       <Card className="op-anim">
         <CardBody className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <ControlBar control={data?.control?.status} busy={busy} onAction={handleAction} />
+            <ControlBar control={data?.control?.status} busy={busy} ready={ready} onAction={handleAction} />
             {running && (
               <span className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-600">
                 <Loader2 size={14} className="animate-spin" />
@@ -214,8 +270,14 @@ export function QueuePage() {
               </span>
             )}
           </div>
-          <div className="op-progress h-2 w-full overflow-hidden rounded-full bg-ink-100">
-            <div className="h-full bg-brand-500" style={{ width: `${progress}%` }} />
+          <div
+            className="op-progress h-2 w-full overflow-hidden rounded-full bg-ink-100"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress}
+          >
+            <div className="h-full bg-brand-500 transition-all duration-300" style={{ width: `${progress}%` }} />
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-xl bg-ink-50 px-3 py-2">
@@ -307,10 +369,11 @@ export function QueuePage() {
                           <td className="px-2 py-2">
                             <button
                               type="button"
-                              disabled={restoring === it.attachment_id}
+                              disabled={restoring === it.attachment_id || !['completed', 'skipped'].includes(it.status)}
                               onClick={() => handleRestore(it.attachment_id)}
-                              className="inline-flex items-center gap-1 text-xs text-ink-500 hover:text-brand-600 disabled:opacity-50"
+                              className="inline-flex items-center gap-1 text-xs text-ink-500 hover:text-brand-600 disabled:opacity-40"
                               title="بازیابی نسخه اصلی"
+                              aria-label="بازیابی نسخه اصلی"
                             >
                               {restoring === it.attachment_id ? (
                                 <Loader2 size={14} className="animate-spin" />

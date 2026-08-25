@@ -61,6 +61,7 @@ function LogLine({ entry }) {
 export function LogsPage() {
   const [level, setLevel] = useState('');
   const [clearing, setClearing] = useState(false);
+  const [clearError, setClearError] = useState(null);
   const { loading, error, data, refresh } = useApi(
     () => api.getLogs({ level, limit: 200 }),
     [level]
@@ -74,8 +75,11 @@ export function LogsPage() {
     setClearing(true);
     api
       .clearLogs()
-      .then(() => refresh())
-      .catch(() => {})
+      .then(() => {
+        setClearError(null);
+        return refresh();
+      })
+      .catch((e) => setClearError(e.message || 'پاک‌کردن گزارش‌ها ناموفق بود.'))
       .finally(() => setClearing(false));
   };
 
@@ -118,6 +122,12 @@ export function LogsPage() {
           );
         })}
       </div>
+
+      {clearError && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700">
+          {clearError}
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-2xl border border-ink-800 bg-[#0b1120] shadow-sm">
         <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-2">
