@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Zap, Settings2, ScanLine, ListChecks, BarChart3, Package, Loader2, CheckCircle2 } from 'lucide-react';
+import { Zap, Loader2, CheckCircle2 } from 'lucide-react';
 import { StatsCards } from './StatsCards';
 import { CompatibilityPanel } from '../compatibility/CompatibilityPanel';
 import { api } from '../../api/client';
@@ -35,6 +35,26 @@ function AutomationStatus() {
 }
 
 export function DashboardPage() {
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState(null);
+
+  const startNow = async () => {
+    setBusy(true);
+    setError(null);
+    setDone(false);
+    try {
+      await api.scan({ scope: 'all' });
+      await api.queueStart();
+      setDone(true);
+      setTimeout(() => setDone(false), 3000);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -61,14 +81,21 @@ export function DashboardPage() {
                 اسکن، برآورد و بهینه‌سازی گروهی در پس‌زمینه و بدون نیاز به باز بودن
                 مرورگر.
               </p>
+              {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}
+              {done && (
+                <p className="mt-2 inline-flex items-center gap-1 text-xs text-green-600">
+                  <CheckCircle2 size={14} /> اسکن انجام شد و پردازش آغاز گردید.
+                </p>
+              )}
             </div>
             <button
               type="button"
-              disabled
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white opacity-60 cursor-not-allowed"
+              onClick={startNow}
+              disabled={busy}
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
             >
-              <Zap size={16} />
-              شروع بهینه‌سازی
+              {busy ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+              {busy ? 'در حال آغاز…' : 'شروع بهینه‌سازی'}
             </button>
           </div>
         </CardBody>
