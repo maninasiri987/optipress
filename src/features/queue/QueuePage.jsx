@@ -19,6 +19,9 @@ const STATUS_META = {
   skipped: { label: 'رد شده', tone: 'neutral' },
 };
 
+// Small batches per tick so the table/progress visibly advance item by item.
+const LIVE_BATCH = 2;
+
 function ControlBar({ control, busy, onAction }) {
   const running = control === 'running';
   const paused = control === 'paused';
@@ -84,14 +87,26 @@ export function QueuePage() {
   const handleAction = async (action) => {
     setBusy(true);
     try {
-      let fn;
-      if (action === 'start') fn = api.queueStart;
-      else if (action === 'pause') fn = api.queuePause;
-      else if (action === 'resume') fn = api.queueResume;
-      else if (action === 'stop') fn = api.queueStop;
-      else if (action === 'retry') fn = api.queueRetry;
-      else fn = api.queueProcess;
-      const res = await fn();
+      let res;
+      if (action === 'start') {
+        // Nothing queued yet? Scan first so Start has work to do.
+        const total = Number(data?.stats?.total) || 0;
+        const pending = Number(data?.stats?.pending) || 0;
+        if (total === 0 || pending === 0) {
+          await api.scan({ scope: 'all' });
+        }
+        res = await api.queueStart(LIVE_BATCH);
+      } else if (action === 'pause') {
+        res = await api.queuePause();
+      } else if (action === 'resume') {
+        res = await api.queueResume();
+      } else if (action === 'stop') {
+        res = await api.queueStop();
+      } else if (action === 'retry') {
+        res = await api.queueRetry();
+      } else {
+        res = await api.queueProcess();
+      }
       if (res.summary && typeof res.summary.processed !== 'undefined') {
         flash(
           `دسته پردازش شد: ${formatNumber(res.summary.processed)} مورد، ` +
@@ -149,13 +164,14 @@ export function QueuePage() {
         return;
       }
       try {
-        const d = await api.queueProcess();
-        setData(d);
+        await api.queueProcess();
+        // Reload items + stats so the table/progress update live.
+        await load();
       } catch (e) {
         drivingRef.current = false;
         return;
       }
-      setTimeout(loop, 1200);
+      setTimeout(loop, 900);
     };
     loop();
     return () => { drivingRef.current = false; };

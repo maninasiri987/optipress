@@ -135,6 +135,9 @@ class RestController {
 				'methods'             => WP_REST_Server::EDITABLE,
 				'callback'            => array( $this, 'queue_start' ),
 				'permission_callback' => array( $this, 'admin_permission' ),
+				'args'                => array(
+					'batch_size' => array( 'type' => 'integer', 'sanitize_callback' => 'absint', 'default' => 0 ),
+				),
 			)
 		);
 
@@ -185,6 +188,9 @@ class RestController {
 				'methods'             => WP_REST_Server::EDITABLE,
 				'callback'            => array( $this, 'queue_process' ),
 				'permission_callback' => array( $this, 'admin_permission' ),
+				'args'                => array(
+					'batch_size' => array( 'type' => 'integer', 'sanitize_callback' => 'absint', 'default' => 0 ),
+				),
 			)
 		);
 
@@ -399,13 +405,19 @@ class RestController {
 	 *
 	 * @return \WP_REST_Response
 	 */
-	public function queue_start() {
+	public function queue_start( $request = null ) {
 		$queue = new QueueManager();
 		$queue->set_control( 'running' );
-		$summary = ( new Processor() )->process_batch();
+		$batch   = $request ? (int) $request->get_param( 'batch_size' ) : 0;
+		$summary = ( new Processor() )->process_batch( $batch > 0 ? $batch : 0 );
 		$this->maybe_stop( $queue );
 		return rest_ensure_response(
-			array( 'control' => $queue->get_control(), 'summary' => $summary, 'stats' => $queue->get_stats() )
+			array(
+				'control' => $queue->get_control(),
+				'summary' => $summary,
+				'stats'   => $queue->get_stats(),
+				'items'   => $queue->get_items( array( 'limit' => 200 ) )['items'],
+			)
 		);
 	}
 
@@ -437,7 +449,12 @@ class RestController {
 		$summary = ( new Processor() )->process_batch();
 		$this->maybe_stop( $queue );
 		return rest_ensure_response(
-			array( 'control' => $queue->get_control(), 'summary' => $summary, 'stats' => $queue->get_stats() )
+			array(
+				'control' => $queue->get_control(),
+				'summary' => $summary,
+				'stats'   => $queue->get_stats(),
+				'items'   => $queue->get_items( array( 'limit' => 200 ) )['items'],
+			)
 		);
 	}
 
@@ -464,7 +481,13 @@ class RestController {
 		$summary = ( new Processor() )->process_batch();
 		$this->maybe_stop( $queue );
 		return rest_ensure_response(
-			array( 'reset' => $reset, 'control' => $queue->get_control(), 'summary' => $summary, 'stats' => $queue->get_stats() )
+			array(
+				'reset'   => $reset,
+				'control' => $queue->get_control(),
+				'summary' => $summary,
+				'stats'   => $queue->get_stats(),
+				'items'   => $queue->get_items( array( 'limit' => 200 ) )['items'],
+			)
 		);
 	}
 
@@ -473,13 +496,19 @@ class RestController {
 	 *
 	 * @return \WP_REST_Response
 	 */
-	public function queue_process() {
+	public function queue_process( $request = null ) {
 		$queue = new QueueManager();
 		$queue->set_control( 'running' );
-		$summary = ( new Processor() )->process_batch();
+		$batch   = $request ? (int) $request->get_param( 'batch_size' ) : 0;
+		$summary = ( new Processor() )->process_batch( $batch > 0 ? $batch : 0 );
 		$this->maybe_stop( $queue );
 		return rest_ensure_response(
-			array( 'summary' => $summary, 'stats' => $queue->get_stats(), 'control' => $queue->get_control() )
+			array(
+				'summary' => $summary,
+				'stats'   => $queue->get_stats(),
+				'control' => $queue->get_control(),
+				'items'   => $queue->get_items( array( 'limit' => 200 ) )['items'],
+			)
 		);
 	}
 

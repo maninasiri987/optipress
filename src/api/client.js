@@ -56,12 +56,20 @@ export const api = {
     ).toString();
     return request(`/queue${qs ? `?${qs}` : ''}`);
   },
-  queueStart: () => request('/queue/start', { method: 'POST' }),
+  queueStart: (batchSize = 0) =>
+    request('/queue/start', {
+      method: 'POST',
+      body: batchSize > 0 ? { batch_size: batchSize } : undefined,
+    }),
   queuePause: () => request('/queue/pause', { method: 'POST' }),
   queueResume: () => request('/queue/resume', { method: 'POST' }),
   queueStop: () => request('/queue/stop', { method: 'POST' }),
   queueRetry: () => request('/queue/retry', { method: 'POST' }),
-  queueProcess: () => request('/queue/process', { method: 'POST' }),
+  queueProcess: (batchSize = 0) =>
+    request('/queue/process', {
+      method: 'POST',
+      body: batchSize > 0 ? { batch_size: batchSize } : undefined,
+    }),
 
   // Backup
   backupRestore: (attachmentId) =>
