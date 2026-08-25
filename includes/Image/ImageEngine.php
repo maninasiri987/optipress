@@ -387,8 +387,11 @@ class ImageEngine {
 			)
 		);
 
+		// wp_generate_attachment_metadata() lives in an admin-only include that
+		// is NOT loaded on frontend/REST/cron requests — load it ourselves or
+		// sub-sizes would silently never be converted outside of WP-CLI.
 		if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
-			return;
+			require_once ABSPATH . 'wp-admin/includes/image.php';
 		}
 
 		// Regenerate metadata (and sub-sizes) from the optimized main file.

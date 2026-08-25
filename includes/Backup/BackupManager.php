@@ -122,12 +122,16 @@ class BackupManager {
 		);
 		delete_post_meta( $attachment_id, '_optipress_optimized' );
 
-		if ( function_exists( 'wp_generate_attachment_metadata' ) ) {
-			wp_update_attachment_metadata(
-				$attachment_id,
-				wp_generate_attachment_metadata( $attachment_id, $restored_path )
-			);
+		// wp_generate_attachment_metadata() lives in an admin-only include that
+		// is NOT loaded on frontend/REST/cron requests — load it ourselves or
+		// restored attachments would silently keep stale webp metadata.
+		if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/image.php';
 		}
+		wp_update_attachment_metadata(
+			$attachment_id,
+			wp_generate_attachment_metadata( $attachment_id, $restored_path )
+		);
 
 		optipress_log( 'info', __( 'نسخه اصلی بازیابی شد.', 'optipress' ), array( 'attachment_id' => $attachment_id ) );
 		return true;
