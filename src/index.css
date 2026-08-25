@@ -384,6 +384,3 @@ body.optipress-dark #wpfooter a {
 .op-progress {
   transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.op-donut-value {
-  transition: stroke-dasharray 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-}

@@ -1,30 +1,47 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { TrendingDown, Archive, FileDown } from 'lucide-react';
 import { Card, CardBody } from '../ui/Card';
 import { useApi } from '../../hooks/useApi';
 import { api } from '../../api/client';
 import { formatBytes, formatPercent } from '../../lib/format';
 
+// Smoothly animates from 0 to `target` using an ease-out cubic over `duration` ms.
+function useAnimatedValue(target, duration = 900) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    let raf;
+    const start = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(target * eased);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return value;
+}
+
 function Donut({ value, color }) {
-  const v = Math.max(0, Math.min(100, Number(value) || 0));
+  const v = useAnimatedValue(Math.max(0, Math.min(100, Number(value) || 0)));
   return (
     <div className="relative h-32 w-32 shrink-0">
       <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
         <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e2e8f0" strokeWidth="4" />
-          <circle
-            cx="18"
-            cy="18"
-            r="15.9155"
-            fill="none"
-            stroke={color}
-            strokeWidth="4"
-            className="op-donut-value"
-            strokeDasharray={`${v} 100`}
-            strokeLinecap="round"
-          />
+        <circle
+          cx="18"
+          cy="18"
+          r="15.9155"
+          fill="none"
+          stroke={color}
+          strokeWidth="4"
+          strokeDasharray={`${v} 100`}
+          strokeLinecap="round"
+        />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold text-ink-900">{formatPercent(v)}</span>
+        <span className="op-numeric text-2xl font-bold text-ink-900">{formatPercent(v)}</span>
         <span className="text-[10px] text-ink-400">کاهش</span>
       </div>
     </div>
@@ -33,6 +50,12 @@ function Donut({ value, color }) {
 
 export function ReductionDonut() {
   const { data, loading } = useApi(api.getStats);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const id = setTimeout(() => setMounted(true), 60);
+    return () => clearTimeout(id);
+  }, []);
 
   if (loading || !data) {
     return (
@@ -89,8 +112,14 @@ export function ReductionDonut() {
             </div>
 
             <div className="flex h-2.5 overflow-hidden rounded-full bg-ink-100">
-              <div className="bg-green-500" style={{ width: `${savedPct}%` }} />
-              <div className="bg-ink-300" style={{ width: `${optimizedPct}%` }} />
+              <div
+                className="bg-green-500 transition-all duration-700 ease-out"
+                style={{ width: mounted ? `${savedPct}%` : '0%' }}
+              />
+              <div
+                className="bg-ink-300 transition-all duration-700 ease-out"
+                style={{ width: mounted ? `${optimizedPct}%` : '0%' }}
+              />
             </div>
             <p className="text-[11px] text-ink-400">
               <span className="inline-block h-2 w-2 rounded-full bg-green-500 align-middle" /> صرفه‌جویی

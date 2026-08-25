@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollText, Trash2, Loader2, Terminal } from 'lucide-react';
-import { Card, CardHeader } from '../../components/ui/Card';
+import { Card } from '../../components/ui/Card';
 import { useApi } from '../../hooks/useApi';
 import { api } from '../../api/client';
 
@@ -118,20 +118,17 @@ export function LogsPage() {
         })}
       </div>
 
-      <Card className="overflow-hidden">
-        <CardHeader
-          title="ترمینال لاگ"
-          subtitle={count > 0 ? `${count} خط` : 'موردی ثبت نشده است'}
-          icon={Terminal}
-        />
-        <div className="bg-[#0b1120]">
-          <div className="flex items-center gap-2 border-b border-white/5 bg-[#111827] px-4 py-2">
-            <span className="h-3 w-3 rounded-full bg-[#ff5f56]" />
-            <span className="h-3 w-3 rounded-full bg-[#ffbd2e]" />
-            <span className="h-3 w-3 rounded-full bg-[#27c93f]" />
-            <span className="ms-2 font-mono text-xs text-slate-500">optipress — log</span>
+      <Card className="overflow-hidden border-ink-800 bg-[#0b1120]">
+        <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-2">
+          <div className="flex items-center gap-2 text-slate-300">
+            <Terminal size={15} className="text-slate-500" />
+            <span className="text-sm font-medium text-slate-200">ترمینال لاگ</span>
+            <span className="text-xs text-slate-500">
+              — {count > 0 ? `${count} خط` : 'موردی ثبت نشده است'}
+            </span>
           </div>
-          <div className="op-scroll max-h-[60vh] overflow-auto px-4 py-3 font-mono text-[13px] leading-relaxed">
+        </div>
+        <div className="op-scroll max-h-[60vh] overflow-auto px-4 py-3 font-mono text-[13px] leading-relaxed">
             {loading ? (
               <div className="flex items-center gap-2 text-slate-400">
                 <Loader2 size={16} className="animate-spin" /> در حال بارگذاری…
@@ -148,7 +145,6 @@ export function LogsPage() {
               </div>
             )}
           </div>
-        </div>
       </Card>
     </div>
   );
