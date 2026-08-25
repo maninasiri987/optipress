@@ -117,6 +117,50 @@ class QueueManager {
 	}
 
 	/**
+	 * Enqueue an attachment by ID using its stored file and current settings.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return int Inserted row ID, or 0 if not an image or already queued.
+	 */
+	public function enqueue_attachment( $attachment_id ) {
+		$file = get_attached_file( $attachment_id );
+		if ( ! $file || ! wp_get_image_mime( $file ) ) {
+			return 0;
+		}
+		$target = optipress_get_option( 'convert_to', 'webp' );
+		return $this->enqueue( $attachment_id, $file, $target );
+	}
+
+	/**
+	 * Fetch queue rows for a set of attachment IDs in a single query.
+	 *
+	 * @param int[] $attachment_ids Attachment IDs.
+	 * @return array<int, array<string, mixed>> Map of attachment_id => row.
+	 */
+	public function get_status_map( array $attachment_ids ) {
+		global $wpdb;
+		$ids = array_filter( array_map( 'intval', $attachment_ids ) );
+		if ( empty( $ids ) ) {
+			return array();
+		}
+		$table  = self::table();
+		$ph     = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$rows   = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT attachment_id, status, saved_bytes, source_size, optimized_size, target_format
+				FROM {$table} WHERE attachment_id IN ({$ph})",
+				...$ids
+			),
+			ARRAY_A
+		);
+		$map = array();
+		foreach ( (array) $rows as $row ) {
+			$map[ (int) $row['attachment_id'] ] = $row;
+		}
+		return $map;
+	}
+
+	/**
 	 * Claim a batch of items for processing.
 	 *
 	 * Reclaims stale "processing" rows (started longer ago than the timeout)

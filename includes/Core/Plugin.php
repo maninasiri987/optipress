@@ -66,6 +66,7 @@ class Plugin {
 		$this->modules['scheduler']      = new \OptiPress\Scheduler\Scheduler();
 		$this->modules['upload_watcher'] = new \OptiPress\Scanner\UploadWatcher();
 		$this->modules['woocommerce']    = new \OptiPress\WooCommerce\WooCommerceIntegration();
+		$this->modules['media_library']  = new \OptiPress\Media\MediaLibrary();
 
 		foreach ( $this->modules as $module ) {
 			if ( method_exists( $module, 'register' ) ) {
