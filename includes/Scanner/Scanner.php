@@ -49,6 +49,9 @@ class Scanner {
 		$scanned  = 0;
 		$enqueued = 0;
 		$skipped  = 0;
+		$already  = 0;
+
+		$queue = new QueueManager();
 
 		foreach ( $attachment_ids as $attachment_id ) {
 			$scanned++;
@@ -59,10 +62,18 @@ class Scanner {
 			}
 
 			if ( ! $this->is_optimizable( $path ) ) {
+				$skipped++;
 				continue;
 			}
 
-			$enqueued_id = ( new QueueManager() )->enqueue(
+			// Already in the queue (pending/processing/completed) — not an error,
+			// just don't double-add it.
+			if ( $queue->is_queued( $attachment_id ) ) {
+				$already++;
+				continue;
+			}
+
+			$enqueued_id = $queue->enqueue(
 				$attachment_id,
 				$path,
 				$target_format
@@ -84,6 +95,7 @@ class Scanner {
 			'scanned'  => $scanned,
 			'enqueued' => $enqueued,
 			'skipped'  => $skipped,
+			'already'  => $already,
 		);
 	}
 

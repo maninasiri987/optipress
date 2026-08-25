@@ -113,7 +113,7 @@ export function ScannerPage() {
 
           {result && (
             <div className="space-y-3">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-xl bg-ink-50 px-4 py-3">
                   <p className="text-xs text-ink-500">بررسی‌شده</p>
                   <p className="mt-1 text-lg font-bold text-ink-900">
@@ -126,7 +126,16 @@ export function ScannerPage() {
                     {formatNumber(result.enqueued)}
                   </p>
                 </div>
-                <div className="rounded-xl bg-ink-50 px-4 py-3" title="تصاویری که از قبل بهینه‌سازی شده‌اند یا فرمت آن‌ها پشتیبانی نمی‌شود (مانند WebP/AVIF).">
+                <div className="rounded-xl bg-ink-50 px-4 py-3">
+                  <p className="text-xs text-ink-500">در صف موجود</p>
+                  <p className="mt-1 text-lg font-bold text-ink-900">
+                    {formatNumber(result.already)}
+                  </p>
+                </div>
+                <div
+                  className="rounded-xl bg-ink-50 px-4 py-3"
+                  title="تصاویری که از قبل بهینه‌سازی شده‌اند یا فرمت آن‌ها پشتیبانی نمی‌شود (مانند WebP/AVIF)."
+                >
                   <p className="inline-flex items-center gap-1 text-xs text-ink-500">
                     رد شده
                     <Info size={13} className="text-ink-400" />
@@ -137,8 +146,9 @@ export function ScannerPage() {
                 </div>
               </div>
               <p className="text-xs text-ink-400">
-                تصاویر «رد شده» از قبل بهینه‌سازی شده‌اند یا فرمت آن‌ها (مثل WebP/AVIF)
-                نیازی به تبدیل ندارد.
+                «در صف موجود» تصاویری هستند که قبلاً به صف اضافه شده‌اند. «رد شده»
+                تصاویری‌اند که از قبل بهینه‌سازی شده‌اند یا فرمت آن‌ها (مثل WebP/AVIF)
+                نیازی به تبدیل ندارد — این‌ها خطا نیستند.
               </p>
             </div>
           )}

@@ -133,6 +133,29 @@ class QueueManager {
 	}
 
 	/**
+	 * Whether a queue item already exists for an attachment (pending,
+	 * processing or completed). Used by the scanner so already-queued images
+	 * are reported as "already in queue" rather than "rejected".
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return bool
+	 */
+	public function is_queued( $attachment_id ) {
+		global $wpdb;
+		$table = self::table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		return (bool) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$table} WHERE attachment_id = %d AND status IN (%s, %s, %s)",
+				$attachment_id,
+				'pending',
+				'processing',
+				'completed'
+			)
+		);
+	}
+
+	/**
 	 * Fetch queue rows for a set of attachment IDs in a single query.
 	 *
 	 * @param int[] $attachment_ids Attachment IDs.
