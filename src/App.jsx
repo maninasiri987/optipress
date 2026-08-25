@@ -41,9 +41,6 @@ export default function App() {
     };
   }, []);
 
-  const iconUrl =
-    (typeof window !== 'undefined' && window.optipressSettings?.iconUrl) || '';
-
   return (
     <div className="flex min-h-screen bg-ink-50">
       {/* Fixed right sidebar (RTL). */}

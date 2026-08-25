@@ -49,7 +49,7 @@ class AdminPage {
 			'manage_options',
 			'optipress',
 			array( $this, 'render_page' ),
-			OPTIPRESS_URL . 'assets/icon.png',
+			'dashicons-images-alt2',
 			58
 		);
 	}

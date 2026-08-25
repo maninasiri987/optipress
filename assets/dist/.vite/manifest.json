@@ -1,11 +1,18 @@
 {
   "index.html": {
-    "file": "assets/index-8b8RpEoo.js",
+    "file": "assets/index-CHRhqPXX.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
     "css": [
-      "assets/index-BjVe0F2k.css"
+      "assets/index-6EZcBQmu.css"
+    ],
+    "assets": [
+      "assets/vazirmatn-BeciDpKm.woff2"
     ]
+  },
+  "src/fonts/vazirmatn.woff2": {
+    "file": "assets/vazirmatn-BeciDpKm.woff2",
+    "src": "src/fonts/vazirmatn.woff2"
   }
 }
