@@ -9,12 +9,12 @@ import { SettingsPage } from './features/settings/SettingsPage';
 import { api } from './api/client';
 
 const NAV = [
-  { id: 'dashboard', label: 'داشبورد', icon: LayoutDashboard },
-  { id: 'scanner', label: 'اسکنر', icon: ScanLine },
-  { id: 'queue', label: 'صف بهینه‌سازی', icon: ListChecks },
-  { id: 'reports', label: 'گزارش‌ها', icon: BarChart3 },
-  { id: 'woocommerce', label: 'ووکامرس', icon: Package },
-  { id: 'settings', label: 'تنظیمات', icon: Settings2 },
+  { id: 'dashboard', label: 'داشبورد', icon: LayoutDashboard, page: 'optipress' },
+  { id: 'scanner', label: 'اسکنر', icon: ScanLine, page: 'optipress-scanner' },
+  { id: 'queue', label: 'صف بهینه‌سازی', icon: ListChecks, page: 'optipress-queue' },
+  { id: 'reports', label: 'گزارش‌ها', icon: BarChart3, page: 'optipress-reports' },
+  { id: 'woocommerce', label: 'ووکامرس', icon: Package, page: 'optipress-woocommerce' },
+  { id: 'settings', label: 'تنظیمات', icon: Settings2, page: 'optipress-settings' },
 ];
 
 function applyTheme(theme) {
@@ -25,7 +25,11 @@ function applyTheme(theme) {
 }
 
 export default function App() {
-  const [active, setActive] = useState('dashboard');
+  const adminUrl =
+    (typeof window !== 'undefined' && window.optipressSettings?.adminUrl) || '';
+  const initialTab =
+    (typeof window !== 'undefined' && window.optipressSettings?.activeTab) || 'dashboard';
+  const [active, setActive] = useState(initialTab);
 
   useEffect(() => {
     let activeReq = true;
@@ -56,10 +60,9 @@ export default function App() {
             const Icon = item.icon;
             const isActive = active === item.id;
             return (
-              <button
+              <a
                 key={item.id}
-                type="button"
-                onClick={() => setActive(item.id)}
+                href={adminUrl + 'admin.php?page=' + item.page}
                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                   isActive
                     ? 'bg-brand-50 text-brand-700'
@@ -68,7 +71,7 @@ export default function App() {
               >
                 <Icon size={18} />
                 {item.label}
-              </button>
+              </a>
             );
           })}
         </nav>

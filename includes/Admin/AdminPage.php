@@ -52,6 +52,25 @@ class AdminPage {
 			'dashicons-images-alt2',
 			58
 		);
+
+		$submenus = array(
+			'optipress'             => __( 'داشبورد', 'optipress' ),
+			'optipress-scanner'     => __( 'اسکنر', 'optipress' ),
+			'optipress-queue'       => __( 'صف بهینه‌سازی', 'optipress' ),
+			'optipress-reports'     => __( 'گزارش‌ها', 'optipress' ),
+			'optipress-woocommerce' => __( 'ووکامرس', 'optipress' ),
+			'optipress-settings'    => __( 'تنظیمات', 'optipress' ),
+		);
+		foreach ( $submenus as $slug => $label ) {
+			add_submenu_page(
+				'optipress',
+				$label,
+				$label,
+				'manage_options',
+				$slug,
+				array( $this, 'render_page' )
+			);
+		}
 	}
 
 	/**
@@ -70,7 +89,7 @@ class AdminPage {
 	 */
 	public function output_favicon() {
 		$screen = get_current_screen();
-		if ( ! $screen || $screen->id !== $this->hook ) {
+		if ( ! $screen || strpos( $screen->id, 'optipress' ) === false ) {
 			return;
 		}
 		$url = OPTIPRESS_URL . 'assets/icon.png';
@@ -84,7 +103,8 @@ class AdminPage {
 	 * @return void
 	 */
 	public function enqueue_assets( $hook_suffix ) {
-		if ( $hook_suffix !== $this->hook ) {
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( strpos( $page, 'optipress' ) !== 0 ) {
 			return;
 		}
 
@@ -126,6 +146,16 @@ class AdminPage {
 			);
 		}
 
+		$tab_map = array(
+			'optipress'             => 'dashboard',
+			'optipress-scanner'     => 'scanner',
+			'optipress-queue'       => 'queue',
+			'optipress-reports'     => 'reports',
+			'optipress-woocommerce' => 'woocommerce',
+			'optipress-settings'    => 'settings',
+		);
+		$active_tab = isset( $tab_map[ $page ] ) ? $tab_map[ $page ] : 'dashboard';
+
 		wp_localize_script(
 			'optipress-app',
 			'optipressSettings',
@@ -133,6 +163,7 @@ class AdminPage {
 				'apiUrl'      => esc_url_raw( rest_url( 'optipress/v1' ) ),
 				'nonce'       => wp_create_nonce( 'wp_rest' ),
 				'adminUrl'    => admin_url(),
+				'activeTab'   => $active_tab,
 			'pluginUrl'   => OPTIPRESS_URL,
 			'assetsUrl'   => OPTIPRESS_URL . 'assets/dist/',
 			'iconUrl'     => OPTIPRESS_URL . 'assets/icon.png',
