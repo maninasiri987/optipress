@@ -13,7 +13,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           <div>
             <a href="#" className="flex items-center gap-2.5 mb-4">
-              <img src="/logo.webp" alt="OptiPress" className="h-8 w-8 brightness-0 invert" width="32" height="32" />
+              <img src="/optipress/logo.webp" alt="OptiPress" className="h-8 w-8 brightness-0 invert" width="32" height="32" />
               <span className="text-lg font-bold text-white">OptiPress</span>
             </a>
             <p className="text-sm text-ink-400 leading-relaxed">افزونه حرفه‌ای بهینه‌سازی تصاویر وردپرس.</p>

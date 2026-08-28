@@ -58,7 +58,7 @@ export default function Hero() {
         </div>
 
         {/* Dashboard Mockup */}
-        <div className="reveal-scale relative max-w-4xl mx-auto">
+        <div className="reveal-scale relative max-w-4xl mx-auto select-none">
           <div className="absolute -inset-1 bg-gradient-to-b from-brand-600/20 via-brand-500/5 to-transparent rounded-2xl blur-xl" />
           <div className="relative bg-ink-900/80 backdrop-blur-sm border border-ink-700/50 rounded-2xl overflow-hidden shadow-2xl shadow-brand-600/10">
             <div className="flex items-center gap-2 px-4 py-3 bg-ink-800/80 border-b border-ink-700/50">

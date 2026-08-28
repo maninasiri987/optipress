@@ -43,7 +43,7 @@ function FAQItem({ faq, isOpen, onToggle }) {
           paddingBottom: isOpen ? '' : '0',
         }}
       >
-        <div className="px-5 pb-4 text-sm text-ink-400 leading-relaxed">{faq.a}</div>
+        <div className="px-5 pt-1 pb-4 text-sm text-ink-400 leading-relaxed">{faq.a}</div>
       </div>
     </div>
   )
