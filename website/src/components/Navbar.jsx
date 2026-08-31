@@ -94,7 +94,7 @@ export default function Navbar() {
             {navLinks.map(link => (
               <a key={link.href} href={link.href} onClick={e => scrollTo(e, link.href)} className="px-4 py-2 text-sm text-ink-300 hover:text-white rounded-lg transition-colors">{link.label}</a>
             ))}
-            <a href="#help" onClick={e => { e.preventDefault(); closeMenu(); window.scrollTo({ top: 0, behavior: 'smooth' }) }} className="px-4 py-2 text-sm text-ink-300 hover:text-white rounded-lg transition-colors">راهنمای نصب</a>
+            <a href="#help" onClick={e => { e.preventDefault(); closeMenu(); window.location.hash = 'help'; window.scrollTo({ top: 0, behavior: 'smooth' }) }} className="px-4 py-2 text-sm text-ink-300 hover:text-white rounded-lg transition-colors">راهنمای نصب</a>
           </div>
 
           <div className="hidden lg:flex items-center gap-3">
@@ -116,7 +116,7 @@ export default function Navbar() {
           {navLinks.map(link => (
             <a key={link.href} href={link.href} onClick={e => scrollTo(e, link.href)} className="block px-4 py-3 text-ink-200 hover:text-white hover:bg-ink-800/60 rounded-xl transition-colors text-sm">{link.label}</a>
           ))}
-          <a href="#help" onClick={e => { e.preventDefault(); closeMenu(); window.scrollTo({ top: 0, behavior: 'smooth' }) }} className="block px-4 py-3 text-ink-200 hover:text-white hover:bg-ink-800/60 rounded-xl transition-colors text-sm">راهنمای نصب</a>
+          <a href="#help" onClick={e => { e.preventDefault(); closeMenu(); window.location.hash = 'help'; window.scrollTo({ top: 0, behavior: 'smooth' }) }} className="block px-4 py-3 text-ink-200 hover:text-white hover:bg-ink-800/60 rounded-xl transition-colors text-sm">راهنمای نصب</a>
           <div className="pt-3">
             <a href="https://www.zhaket.com/" target="_blank" rel="noopener" className="flex items-center justify-center gap-2 w-full bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold px-5 py-3 rounded-xl transition-all">
               <ShoppingCart className="w-4 h-4" />خرید OptiPress
