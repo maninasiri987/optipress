@@ -9,7 +9,7 @@ export default function FinalCTA() {
       <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <div className="reveal">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-5 leading-snug">
-            وقت آن است تصاویر سایتتان <span className="text-gradient-brand">سبک‌تر</span> شوند.
+            وقتشه سایتت رو <span className="text-gradient-brand">سبکتر</span> بکنی
           </h2>
           <p className="text-lg text-ink-400 mb-10 max-w-xl mx-auto">OptiPress مدیریت و بهینه‌سازی تصاویر وردپرس را به یک فرآیند ساده و خودکار تبدیل می‌کند.</p>
         </div>
