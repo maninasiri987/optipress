@@ -4,12 +4,18 @@ import { ShoppingCart, Menu } from 'lucide-react'
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [scrollProgress, setScrollProgress] = useState(0)
   const navbarRef = useRef(null)
   const menuRef = useRef(null)
   const linesRef = useRef([])
+  const progressRef = useRef(null)
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50)
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50)
+      const winH = document.documentElement.scrollHeight - window.innerHeight
+      setScrollProgress(winH > 0 ? (window.scrollY / winH) * 100 : 0)
+    }
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
@@ -88,6 +94,7 @@ export default function Navbar() {
             {navLinks.map(link => (
               <a key={link.href} href={link.href} onClick={e => scrollTo(e, link.href)} className="px-4 py-2 text-sm text-ink-300 hover:text-white rounded-lg transition-colors">{link.label}</a>
             ))}
+            <a href="/optipress/Help.html" className="px-4 py-2 text-sm text-ink-300 hover:text-white rounded-lg transition-colors">راهنمای نصب</a>
           </div>
 
           <div className="hidden lg:flex items-center gap-3">
@@ -109,6 +116,7 @@ export default function Navbar() {
           {navLinks.map(link => (
             <a key={link.href} href={link.href} onClick={e => scrollTo(e, link.href)} className="block px-4 py-3 text-ink-200 hover:text-white hover:bg-ink-800/60 rounded-xl transition-colors text-sm">{link.label}</a>
           ))}
+          <a href="/optipress/Help.html" className="block px-4 py-3 text-ink-200 hover:text-white hover:bg-ink-800/60 rounded-xl transition-colors text-sm">راهنمای نصب</a>
           <div className="pt-3">
             <a href="https://www.zhaket.com/" target="_blank" rel="noopener" className="flex items-center justify-center gap-2 w-full bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold px-5 py-3 rounded-xl transition-all">
               <ShoppingCart className="w-4 h-4" />خرید OptiPress
@@ -116,6 +124,16 @@ export default function Navbar() {
           </div>
         </div>
       </div>
+      {/* Scroll progress bar */}
+      {scrolled && (
+        <div className="h-[2px] bg-ink-800/50">
+          <div
+            ref={progressRef}
+            className="h-full bg-gradient-to-l from-brand-500 to-accent-400 transition-[width] duration-150 ease-out"
+            style={{ width: `${scrollProgress}%` }}
+          />
+        </div>
+      )}
     </nav>
   )
 }

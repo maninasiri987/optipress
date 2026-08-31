@@ -24,7 +24,7 @@ export default function Footer() {
               <li><a href="#features" onClick={e => scrollTo(e, '#features')} className="text-sm text-ink-400 hover:text-white transition-colors">امکانات</a></li>
               <li><a href="#how-it-works" onClick={e => scrollTo(e, '#how-it-works')} className="text-sm text-ink-400 hover:text-white transition-colors">نحوه کار</a></li>
               <li><a href="#faq" onClick={e => scrollTo(e, '#faq')} className="text-sm text-ink-400 hover:text-white transition-colors">سوالات متداول</a></li>
-              <li><a href="#" className="text-sm text-ink-400 hover:text-white transition-colors">مستندات</a></li>
+              <li><a href="/optipress/Help.html" className="text-sm text-ink-400 hover:text-white transition-colors">مستندات</a></li>
               <li><a href="https://www.zhaket.com/" target="_blank" rel="noopener" className="text-sm text-ink-400 hover:text-white transition-colors">خرید از ژاکت</a></li>
             </ul>
           </div>
